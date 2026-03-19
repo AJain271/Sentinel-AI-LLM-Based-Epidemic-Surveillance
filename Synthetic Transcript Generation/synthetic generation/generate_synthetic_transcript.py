@@ -16,7 +16,9 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 OUTPUT_DIR = os.path.join(SCRIPT_DIR, "..", "Synthetic Transcripts")
 
-api_key = "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"
+api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+if not api_key:
+    raise RuntimeError("OPENAI_API_KEY environment variable is not set.")
 client = OpenAI(api_key=api_key)
 
 # ─── Parse C-CDA ─────────────────────────────────────────────────────────────

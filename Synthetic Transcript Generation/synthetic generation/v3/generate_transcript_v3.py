@@ -29,24 +29,20 @@ DEFAULT_MODEL = "gpt-4o"
 DEFAULT_TEMPERATURE = 0.85
 DEFAULT_MAX_TOKENS = 6000
 
-# ─── Paste your OpenAI API key here ─────────────────────────────────────────
-API_KEY = "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"
-
 # ─── OpenAI client ───────────────────────────────────────────────────────────
 
 def _get_client():
-    """Create OpenAI client using the hardcoded API_KEY or OPENAI_API_KEY env var."""
+    """Create OpenAI client using the OPENAI_API_KEY environment variable."""
     try:
         from openai import OpenAI
     except ImportError:
         print("ERROR: openai package not installed.  pip install openai")
         sys.exit(1)
 
-    api_key = API_KEY if API_KEY != "YOUR_API_KEY_HERE" else os.environ.get("OPENAI_API_KEY", "").strip()
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
     if not api_key:
         raise RuntimeError(
-            "No API key found. Either set API_KEY in generate_transcript_v3.py "
-            "or set the OPENAI_API_KEY environment variable."
+            "No API key found. Set the OPENAI_API_KEY environment variable."
         )
     return OpenAI(api_key=api_key)
 

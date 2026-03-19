@@ -26,28 +26,10 @@ for cat_list in CATEGORY_MAP.values():
     ALL_SYMPTOMS.extend(cat_list)
 
 # Initialize OpenAI Client
-api_key = "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"
-
+api_key = os.environ.get("OPENAI_API_KEY", "").strip()
 if not api_key:
-    # Try to extract from experiments.ipynb
-    try:
-        with open("experiments.ipynb", "r", encoding="utf-8") as f:
-            nb_content = f.read()
-            # Simple regex to find the key
-            import re
-            match = re.search(r'OPENAI_API_KEY\s*=\s*["\'](sk-[a-zA-Z0-9\-_]+)["\']', nb_content)
-            if match:
-                api_key = match.group(1)
-                print("Found API Key in experiments.ipynb")
-            else:
-                 print("Could not find API Key in experiments.ipynb (or it is the placeholder 'sk-...')")
-    except Exception as e:
-        print(f"Error reading experiments.ipynb: {e}")
+    raise RuntimeError("OPENAI_API_KEY environment variable is not set.")
 
-if not api_key:
-    print("CRITICAL ERROR: OPENAI_API_KEY not found. Please set it in the environment or in experiments.ipynb.")
-    # We will crash gracefully
-    
 client = OpenAI(api_key=api_key)
 
 def get_zeroshot_json_prompts(transcript):

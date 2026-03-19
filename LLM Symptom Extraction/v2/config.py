@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 # ─── OpenAI settings ─────────────────────────────────────────────────────────
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "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")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 MODEL = "gpt-4o"
 TEMPERATURE = 0.0
 MAX_TOKENS = 4096

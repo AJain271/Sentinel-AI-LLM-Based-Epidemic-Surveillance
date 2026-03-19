@@ -57,17 +57,9 @@ def _load_openai_client():
     openai_mod = importlib.import_module("openai")
     OpenAI = getattr(openai_mod, "OpenAI")
 
-    # Hardcode your API key here if you don't want to use environment variables
-    api_key_override = "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"
-    
-    # Check if the user has replaced the placeholder
-    if api_key_override != "YOUR_API_KEY_HERE":
-        api_key = api_key_override
-    else:
-        api_key = os.environ.get("OPENAI_API_KEY", "").strip()
-
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
     if not api_key:
-        raise RuntimeError("OPENAI_API_KEY is not set. Please set the environment variable or edit _load_openai_client in conversation_orchestrator_v2.py")
+        raise RuntimeError("OPENAI_API_KEY is not set. Please set the environment variable.")
     return OpenAI(api_key=api_key)
 
 
