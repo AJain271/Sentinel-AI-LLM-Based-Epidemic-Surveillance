@@ -27,7 +27,7 @@ EMBED_BACKEND = "openai"
 
 # OpenAI
 OPENAI_EMBED_MODEL = "text-embedding-3-small"   # 1536-dim
-API_KEY = os.environ.get("OPENAI_API_KEY", "") or "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"
+API_KEY = os.environ.get("OPENAI_API_KEY", "")
 
 # Ollama
 OLLAMA_BASE_URL = "http://localhost:11434/v1"
