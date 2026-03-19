@@ -1,0 +1,2730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CCDA Ground Truth vs Synthetic Conversation — Arcelia945 Sam879 Wisoky380</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --panel: #1a1d27;
+    --border: #2a2d3a;
+    --text: #e1e4eb;
+    --text-muted: #8b8fa3;
+    --accent: #6c63ff;
+    --green: #22c55e;
+    --red: #ef4444;
+    --purple: #a855f7;
+    --doctor: #3b82f6;
+    --patient: #f59e0b;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .header {
+    background: linear-gradient(135deg, #1a1d27 0%, #2a1d3a 100%);
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, #6c63ff, #a855f7);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header .subtitle { color: var(--text-muted); font-size: 0.9rem; margin-top: 4px; }
+  .container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    height: calc(100vh - 80px);
+  }
+  .panel {
+    overflow-y: auto;
+    padding: 20px;
+    border-right: 1px solid var(--border);
+  }
+  .panel:last-child { border-right: none; }
+  .panel-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--accent);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 10;
+    padding-top: 4px;
+  }
+  .section {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .section h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text);
+  }
+  .count { color: var(--text-muted); font-weight: 400; font-size: 0.8rem; }
+  .item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    font-size: 0.85rem;
+    border-left: 3px solid transparent;
+  }
+  .item-match { background: rgba(34,197,94,0.08); border-left-color: var(--green); }
+  .item-miss-critical { background: rgba(239,68,68,0.15); border-left-color: var(--red); }
+  .item-miss-minor { background: rgba(139,143,163,0.05); border-left-color: var(--text-muted); opacity: 0.8; }
+  .item-exclude { background: transparent; border-left-color: transparent; opacity: 0.5; }
+  .item-injected { background: rgba(168,85,247,0.1); border-left-color: var(--purple); }
+  .item-main { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .item-meta { margin-top: 4px; font-size: 0.75rem; color: var(--text-muted); }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge.match { background: rgba(34,197,94,0.2); color: var(--green); }
+  .badge.miss-critical { background: rgba(239,68,68,0.3); color: #fca5a5; }
+  .badge.miss-minor { background: rgba(139,143,163,0.2); color: var(--text-muted); font-weight: 400; }
+  .badge.exclude { background: transparent; color: var(--text-muted); font-weight: 400; border: 1px solid var(--border); }
+  .badge.injected { background: rgba(168,85,247,0.2); color: var(--purple); }
+  .badge.priority-must { background: #ef4444; color: white; border-radius: 2px; padding: 2px 6px; font-size: 0.65rem; }
+  .badge.priority-should { background: #f59e0b; color: #1e293b; border-radius: 2px; padding: 2px 6px; font-size: 0.65rem; }
+  .badge.priority-may { background: #3b82f6; color: white; border-radius: 2px; padding: 2px 6px; font-size: 0.65rem; }
+  .badge.priority-exclude { background: #475569; color: white; border-radius: 2px; padding: 2px 6px; font-size: 0.65rem; }
+  .desc { flex: 1; min-width: 200px; }
+  .code { color: var(--text-muted); font-family: monospace; font-size: 0.75rem; }
+  .date { color: var(--text-muted); }
+  .value { color: var(--accent); font-weight: 500; }
+  .demo-table { width: 100%; border-collapse: collapse; }
+  .demo-table td { padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+  .field-label { color: var(--text-muted); width: 100px; }
+  .empty { color: var(--text-muted); font-style: italic; font-size: 0.85rem; }
+  .injected-section { border-color: var(--purple); }
+  .inj-item { padding: 6px 0; font-size: 0.85rem; }
+  /* Transcript */
+  .line { padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; font-size: 0.85rem; }
+  .line.doctor { background: rgba(59,130,246,0.08); border-left: 3px solid var(--doctor); }
+  .line.patient { background: rgba(245,158,11,0.08); border-left: 3px solid var(--patient); }
+  .speaker { font-weight: 700; margin-right: 8px; }
+  .speaker.doc { color: var(--doctor); }
+  .speaker.pat { color: var(--patient); }
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3a3d4a; }
+</style>
+</head>
+<body>
+<div class="header">
+    <h1>CCDA Ground Truth vs Synthetic Conversation</h1>
+    <div class="subtitle">Patient: Arcelia945 Sam879 Wisoky380 &bull; Source: Arcelia945_Sam879_Wisoky380_9c867408-0359-e6e7-4eb3-19a635685828.xml</div>
+</div>
+<div class="container">
+    <div class="panel">
+        <div class="panel-title">📋 CCDA Ground Truth</div>
+        
+            <div class="section">
+                <h3>Demographics</h3>
+                <table class="demo-table"><tr><td class="field-label">Name</td><td>Arcelia945 Sam879 Wisoky380</td></tr><tr><td class="field-label">Age</td><td>53</td></tr><tr><td class="field-label">Gender</td><td>Female</td></tr><tr><td class="field-label">Race</td><td>white</td></tr><tr><td class="field-label">Ethnicity</td><td>non-hispanic</td></tr><tr><td class="field-label">City</td><td>North Reading</td></tr><tr><td class="field-label">State</td><td>Massachusetts</td></tr></table>
+            </div>
+        
+        
+            <div class="section injected-section">
+                <h3>🧪 Injected Symptoms <span class="count">(1)</span></h3>
+                <div class="inj-item"><span class="badge injected">conditions</span> yellow toenails <span class="code">NOVEL-001</span></div>
+            </div>
+        
+        
+            <div class="section">
+                <h3>Conditions / Problems <span class="count">(30 items, 28/30 matched)</span></h3>
+                
+                <div class="item item-miss-critical">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge miss-critical">❌ MISSING (REQUIRED)</span>
+                        <span class="desc">Educated to high school level (finding)</span>
+                        <span class="code">473461003</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Limited social contact (finding)</span>
+                        <span class="code">423315002</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Victim of intimate partner abuse (finding)</span>
+                        <span class="code">706893006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">History of tubal ligation (situation)</span>
+                        <span class="code">267020005</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-critical">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge miss-critical">❌ MISSING (REQUIRED)</span>
+                        <span class="desc">Body mass index 30+ - obesity (finding)</span>
+                        <span class="code">162864005</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Social isolation (finding)</span>
+                        <span class="code">422650009</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Medication review due (situation)</span>
+                        <span class="code">314529007</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Full-time employment (finding)</span>
+                        <span class="code">160903007</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Unhealthy alcohol drinking behavior (finding)</span>
+                        <span class="code">10939881000119105</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Not in labor force (finding)</span>
+                        <span class="code">741062008</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Stress (finding)</span>
+                        <span class="code">73595000</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Gingivitis (disorder)</span>
+                        <span class="code">66383009</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Gingival disease (disorder)</span>
+                        <span class="code">18718003</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Viral sinusitis (disorder)</span>
+                        <span class="code">444814009</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Acute viral pharyngitis (disorder)</span>
+                        <span class="code">195662009</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Full-time employment (finding)</span>
+                        <span class="code">160903007</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Severe anxiety (panic) (finding)</span>
+                        <span class="code">80583007</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Medication review due (situation)</span>
+                        <span class="code">314529007</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Part-time employment (finding)</span>
+                        <span class="code">160904001</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Stress (finding)</span>
+                        <span class="code">73595000</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Viral sinusitis (disorder)</span>
+                        <span class="code">444814009</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Not in labor force (finding)</span>
+                        <span class="code">741062008</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Polyp of colon (disorder)</span>
+                        <span class="code">68496003</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Medication review due (situation)</span>
+                        <span class="code">314529007</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Full-time employment (finding)</span>
+                        <span class="code">160903007</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Social isolation (finding)</span>
+                        <span class="code">422650009</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Medication review due (situation)</span>
+                        <span class="code">314529007</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Gingivitis (disorder)</span>
+                        <span class="code">66383009</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Gingival disease (disorder)</span>
+                        <span class="code">18718003</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-injected">
+                    <div class="item-main">
+                        
+                        <span class="badge injected">INJECTED</span>
+                        <span class="desc">yellow toenails</span>
+                        <span class="code">NOVEL-001</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+            </div>
+        
+        
+            <div class="section">
+                <h3>Medications <span class="count">(3 items, 3/3 matched)</span></h3>
+                
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Amoxicillin 250 MG / Clavulanate 125 MG Oral Tablet</span>
+                        <span class="code">562251</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2018-09-13 → 2018-10-10</span> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">sodium fluoride 0.0272 MG/MG Oral Gel</span>
+                        <span class="code">1535362</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2024-03-13</span> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">sodium fluoride 0.0272 MG/MG Oral Gel</span>
+                        <span class="code">1535362</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2025-03-19</span> </div>
+                </div>
+            
+            </div>
+        
+        
+            <div class="section">
+                <h3>Immunizations <span class="count">(13 items, 0/13 matched)</span></h3>
+                
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-should">SHOULD</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Influenza, split virus, trivalent, PF</span>
+                        <span class="code">140</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2016-03-02</span> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-should">SHOULD</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Influenza, split virus, trivalent, PF</span>
+                        <span class="code">140</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2018-03-07</span> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-should">SHOULD</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Influenza, split virus, trivalent, PF</span>
+                        <span class="code">140</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2019-03-20</span> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-should">SHOULD</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Influenza, split virus, trivalent, PF</span>
+                        <span class="code">140</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2020-03-11</span> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-should">SHOULD</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">COVID-19, mRNA, LNP-S, PF, 100 mcg/0.5mL dose or 50 mcg/0.25mL dose</span>
+                        <span class="code">207</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2020-12-30</span> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-should">SHOULD</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">COVID-19, mRNA, LNP-S, PF, 100 mcg/0.5mL dose or 50 mcg/0.25mL dose</span>
+                        <span class="code">207</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2021-01-27</span> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-should">SHOULD</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">zoster vaccine, live</span>
+                        <span class="code">121</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2022-02-16</span> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-should">SHOULD</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Influenza, split virus, trivalent, PF</span>
+                        <span class="code">140</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2022-02-16</span> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-should">SHOULD</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">zoster vaccine, live</span>
+                        <span class="code">121</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2023-02-22</span> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-should">SHOULD</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Influenza, split virus, trivalent, PF</span>
+                        <span class="code">140</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2023-02-22</span> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-should">SHOULD</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Td (adult), 5 Lf tetanus toxoid, preservative free, adsorbed</span>
+                        <span class="code">113</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2023-02-22</span> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-should">SHOULD</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Influenza, split virus, trivalent, PF</span>
+                        <span class="code">140</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2024-02-28</span> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-should">SHOULD</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Influenza, split virus, trivalent, PF</span>
+                        <span class="code">140</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2025-03-05</span> </div>
+                </div>
+            
+            </div>
+        
+        
+            <div class="section">
+                <h3>Encounters <span class="count">(25 items, 0/25 matched)</span></h3>
+                
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">General examination of patient (procedure)</span>
+                        <span class="code">162673000</span>
+                    </div>
+                    <div class="item-meta"><span class="date">1990-04-11 → 1990-04-11</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">General examination of patient (procedure)</span>
+                        <span class="code">162673000</span>
+                    </div>
+                    <div class="item-meta"><span class="date">1991-04-17 → 1991-04-17</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">General examination of patient (procedure)</span>
+                        <span class="code">162673000</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2006-05-03 → 2006-05-03</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Admission to surgical department (procedure)</span>
+                        <span class="code">305408004</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2007-04-08 → 2007-04-09</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">General examination of patient (procedure)</span>
+                        <span class="code">162673000</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2009-05-06 → 2009-05-06</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">General examination of patient (procedure)</span>
+                        <span class="code">162673000</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2012-02-22 → 2012-02-22</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">General examination of patient (procedure)</span>
+                        <span class="code">162673000</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2014-02-26 → 2014-02-26</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">General examination of patient (procedure)</span>
+                        <span class="code">162673000</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2016-03-02 → 2016-03-02</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">General examination of patient (procedure)</span>
+                        <span class="code">162673000</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2018-03-07 → 2018-03-07</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Encounter for check up (procedure)</span>
+                        <span class="code">185349003</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2018-03-21 → 2018-03-21</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Encounter for symptom (procedure)</span>
+                        <span class="code">185345009</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2018-09-13 → 2018-09-13</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Encounter for symptom (procedure)</span>
+                        <span class="code">185345009</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2019-03-08 → 2019-03-08</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Urgent care clinic (environment)</span>
+                        <span class="code">702927004</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2019-03-20 → 2019-03-20</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">General examination of patient (procedure)</span>
+                        <span class="code">162673000</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2020-03-11 → 2020-03-11</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Administration of vaccine to produce active immunity (procedure)</span>
+                        <span class="code">33879002</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2020-12-30 → 2020-12-30</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Administration of vaccine to produce active immunity (procedure)</span>
+                        <span class="code">33879002</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2021-01-27 → 2021-01-27</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Encounter for symptom (procedure)</span>
+                        <span class="code">185345009</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2021-05-06 → 2021-05-07</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">General examination of patient (procedure)</span>
+                        <span class="code">162673000</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2022-02-16 → 2022-02-16</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Encounter for check up (procedure)</span>
+                        <span class="code">185349003</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2022-02-23 → 2022-02-23</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">General examination of patient (procedure)</span>
+                        <span class="code">162673000</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2023-02-22 → 2023-02-22</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Encounter for check up (procedure)</span>
+                        <span class="code">185349003</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2023-02-28 → 2023-02-28</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">General examination of patient (procedure)</span>
+                        <span class="code">162673000</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2024-02-28 → 2024-02-28</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Encounter for check up (procedure)</span>
+                        <span class="code">185349003</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2024-03-13 → 2024-03-13</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">General examination of patient (procedure)</span>
+                        <span class="code">162673000</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2025-03-05 → 2025-03-05</span> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Encounter for check up (procedure)</span>
+                        <span class="code">185349003</span>
+                    </div>
+                    <div class="item-meta"><span class="date">2025-03-19 → 2025-03-19</span> </div>
+                </div>
+            
+            </div>
+        
+        
+            <div class="section">
+                <h3>Vital Signs <span class="count">(49 items, 0/49 matched)</span></h3>
+                
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body Height</span>
+                        <span class="code">8302-2</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">172 cm</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Pain severity - 0-10 verbal numeric rating [Score] - Reported</span>
+                        <span class="code">72514-3</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">0 {score}</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body Weight</span>
+                        <span class="code">29463-7</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">84.6 kg</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body mass index (BMI) [Ratio]</span>
+                        <span class="code">39156-5</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">28.59 kg/m2</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Heart rate</span>
+                        <span class="code">8867-4</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">88 /min</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Respiratory rate</span>
+                        <span class="code">9279-1</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">12 /min</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body Height</span>
+                        <span class="code">8302-2</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">172 cm</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Pain severity - 0-10 verbal numeric rating [Score] - Reported</span>
+                        <span class="code">72514-3</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">1 {score}</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body Weight</span>
+                        <span class="code">29463-7</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">88.2 kg</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body mass index (BMI) [Ratio]</span>
+                        <span class="code">39156-5</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">29.82 kg/m2</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Heart rate</span>
+                        <span class="code">8867-4</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">70 /min</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Respiratory rate</span>
+                        <span class="code">9279-1</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">12 /min</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body temperature</span>
+                        <span class="code">8310-5</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">37.19679868197133 Cel</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body Height</span>
+                        <span class="code">8302-2</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">172 cm</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Pain severity - 0-10 verbal numeric rating [Score] - Reported</span>
+                        <span class="code">72514-3</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">1 {score}</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body Weight</span>
+                        <span class="code">29463-7</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">90 kg</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body mass index (BMI) [Ratio]</span>
+                        <span class="code">39156-5</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">30.41 kg/m2</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Heart rate</span>
+                        <span class="code">8867-4</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">73 /min</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Respiratory rate</span>
+                        <span class="code">9279-1</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">13 /min</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body Height</span>
+                        <span class="code">8302-2</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">172 cm</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Pain severity - 0-10 verbal numeric rating [Score] - Reported</span>
+                        <span class="code">72514-3</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">2 {score}</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body Weight</span>
+                        <span class="code">29463-7</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">83.3 kg</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body mass index (BMI) [Ratio]</span>
+                        <span class="code">39156-5</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">28.16 kg/m2</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Heart rate</span>
+                        <span class="code">8867-4</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">84 /min</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Respiratory rate</span>
+                        <span class="code">9279-1</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">15 /min</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body Height</span>
+                        <span class="code">8302-2</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">172 cm</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Pain severity - 0-10 verbal numeric rating [Score] - Reported</span>
+                        <span class="code">72514-3</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">1 {score}</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body Weight</span>
+                        <span class="code">29463-7</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">86.1 kg</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body mass index (BMI) [Ratio]</span>
+                        <span class="code">39156-5</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">29.1 kg/m2</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Heart rate</span>
+                        <span class="code">8867-4</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">62 /min</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Respiratory rate</span>
+                        <span class="code">9279-1</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">14 /min</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body Height</span>
+                        <span class="code">8302-2</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">172 cm</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Pain severity - 0-10 verbal numeric rating [Score] - Reported</span>
+                        <span class="code">72514-3</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">2 {score}</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body Weight</span>
+                        <span class="code">29463-7</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">88 kg</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body mass index (BMI) [Ratio]</span>
+                        <span class="code">39156-5</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">29.73 kg/m2</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Heart rate</span>
+                        <span class="code">8867-4</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">95 /min</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Respiratory rate</span>
+                        <span class="code">9279-1</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">13 /min</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body Height</span>
+                        <span class="code">8302-2</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">172 cm</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Pain severity - 0-10 verbal numeric rating [Score] - Reported</span>
+                        <span class="code">72514-3</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">2 {score}</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body Weight</span>
+                        <span class="code">29463-7</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">89.8 kg</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body mass index (BMI) [Ratio]</span>
+                        <span class="code">39156-5</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">30.35 kg/m2</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Heart rate</span>
+                        <span class="code">8867-4</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">94 /min</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Respiratory rate</span>
+                        <span class="code">9279-1</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">13 /min</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body Height</span>
+                        <span class="code">8302-2</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">172 cm</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Pain severity - 0-10 verbal numeric rating [Score] - Reported</span>
+                        <span class="code">72514-3</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">4 {score}</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body Weight</span>
+                        <span class="code">29463-7</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">82.3 kg</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Body mass index (BMI) [Ratio]</span>
+                        <span class="code">39156-5</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">27.8 kg/m2</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Heart rate</span>
+                        <span class="code">8867-4</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">90 /min</span></div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-may">MAY</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Respiratory rate</span>
+                        <span class="code">9279-1</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">14 /min</span></div>
+                </div>
+            
+            </div>
+        
+        
+            <div class="section">
+                <h3>Procedures <span class="count">(79 items, 3/79 matched)</span></h3>
+                
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Assessment of health and social care needs (procedure)</span>
+                        <span class="code">710824005</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Assessment of anxiety (procedure)</span>
+                        <span class="code">710841007</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Depression screening (procedure)</span>
+                        <span class="code">171207006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Depression screening (procedure)</span>
+                        <span class="code">171207006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Assessment of substance use (procedure)</span>
+                        <span class="code">428211000124100</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)</span>
+                        <span class="code">763302001</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Assessment of health and social care needs (procedure)</span>
+                        <span class="code">710824005</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Screening for domestic abuse (procedure)</span>
+                        <span class="code">866148006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Depression screening (procedure)</span>
+                        <span class="code">171207006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Depression screening (procedure)</span>
+                        <span class="code">171207006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Assessment of substance use (procedure)</span>
+                        <span class="code">428211000124100</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)</span>
+                        <span class="code">763302001</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Patient referral for dental care (procedure)</span>
+                        <span class="code">103697008</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Dental consultation and report (procedure)</span>
+                        <span class="code">34043003</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Dental care (regime/therapy)</span>
+                        <span class="code">225362009</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Removal of supragingival plaque and calculus from all teeth using dental instrument (procedure)</span>
+                        <span class="code">1260009003</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)</span>
+                        <span class="code">1260010008</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Examination of gingivae (procedure)</span>
+                        <span class="code">274788003</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Dental surgical procedure (procedure)</span>
+                        <span class="code">81733005</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Dental application of desensitizing medicament (procedure)</span>
+                        <span class="code">3802001</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Gingivectomy or gingivoplasty, per tooth (procedure)</span>
+                        <span class="code">64544008</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Postoperative care for dental procedure (regime/therapy)</span>
+                        <span class="code">456191000124101</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Oral health education (procedure)</span>
+                        <span class="code">243085009</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Medication reconciliation (procedure)</span>
+                        <span class="code">430193006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Assessment of health and social care needs (procedure)</span>
+                        <span class="code">710824005</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Assessment of anxiety (procedure)</span>
+                        <span class="code">710841007</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Screening for domestic abuse (procedure)</span>
+                        <span class="code">866148006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Assessment of substance use (procedure)</span>
+                        <span class="code">428211000124100</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Screening for drug abuse (procedure)</span>
+                        <span class="code">713106006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Assessment of health and social care needs (procedure)</span>
+                        <span class="code">710824005</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Assessment of anxiety (procedure)</span>
+                        <span class="code">710841007</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Screening for domestic abuse (procedure)</span>
+                        <span class="code">866148006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Depression screening (procedure)</span>
+                        <span class="code">171207006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Depression screening (procedure)</span>
+                        <span class="code">171207006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Assessment of substance use (procedure)</span>
+                        <span class="code">428211000124100</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Assessment using Alcohol Use Disorders Identification Test - Consumption (procedure)</span>
+                        <span class="code">763302001</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Medication reconciliation (procedure)</span>
+                        <span class="code">430193006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Assessment of health and social care needs (procedure)</span>
+                        <span class="code">710824005</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Depression screening (procedure)</span>
+                        <span class="code">171207006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Depression screening (procedure)</span>
+                        <span class="code">171207006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Colonoscopy (procedure)</span>
+                        <span class="code">73761001</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Screening for occult blood in feces (procedure)</span>
+                        <span class="code">104435004</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Rectal polypectomy (procedure)</span>
+                        <span class="code">274031008</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Assessment of health and social care needs (procedure)</span>
+                        <span class="code">710824005</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Assessment of anxiety (procedure)</span>
+                        <span class="code">710841007</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Screening for domestic abuse (procedure)</span>
+                        <span class="code">866148006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Depression screening (procedure)</span>
+                        <span class="code">171207006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Depression screening (procedure)</span>
+                        <span class="code">171207006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Colonoscopy (procedure)</span>
+                        <span class="code">73761001</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Medication reconciliation (procedure)</span>
+                        <span class="code">430193006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Assessment of health and social care needs (procedure)</span>
+                        <span class="code">710824005</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Depression screening (procedure)</span>
+                        <span class="code">171207006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Depression screening (procedure)</span>
+                        <span class="code">171207006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Assessment of substance use (procedure)</span>
+                        <span class="code">428211000124100</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Screening for drug abuse (procedure)</span>
+                        <span class="code">713106006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Patient referral for dental care (procedure)</span>
+                        <span class="code">103697008</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Dental consultation and report (procedure)</span>
+                        <span class="code">34043003</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Dental care (regime/therapy)</span>
+                        <span class="code">225362009</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Removal of supragingival plaque and calculus from all teeth using dental instrument (procedure)</span>
+                        <span class="code">1260009003</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)</span>
+                        <span class="code">1260010008</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Examination of gingivae (procedure)</span>
+                        <span class="code">274788003</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Dental fluoride treatment (procedure)</span>
+                        <span class="code">68071007</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Oral health education (procedure)</span>
+                        <span class="code">243085009</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Assessment of health and social care needs (procedure)</span>
+                        <span class="code">710824005</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Depression screening (procedure)</span>
+                        <span class="code">171207006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Depression screening (procedure)</span>
+                        <span class="code">171207006</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Patient referral for dental care (procedure)</span>
+                        <span class="code">103697008</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Dental consultation and report (procedure)</span>
+                        <span class="code">34043003</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Dental care (regime/therapy)</span>
+                        <span class="code">225362009</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Removal of supragingival plaque and calculus from all teeth using dental instrument (procedure)</span>
+                        <span class="code">1260009003</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Removal of subgingival plaque and calculus from all teeth using dental instrument (procedure)</span>
+                        <span class="code">1260010008</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Dental plain X-ray bitewing (procedure)</span>
+                        <span class="code">241046008</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Examination of gingivae (procedure)</span>
+                        <span class="code">274788003</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Dental surgical procedure (procedure)</span>
+                        <span class="code">81733005</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Dental application of desensitizing medicament (procedure)</span>
+                        <span class="code">3802001</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Gingivectomy or gingivoplasty, per tooth (procedure)</span>
+                        <span class="code">64544008</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Postoperative care for dental procedure (regime/therapy)</span>
+                        <span class="code">456191000124101</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Dental fluoride treatment (procedure)</span>
+                        <span class="code">68071007</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">Oral health education (procedure)</span>
+                        <span class="code">243085009</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+            </div>
+        
+        
+            <div class="section">
+                <h3>Diagnostic Results <span class="count">(25 items, 0/25 matched)</span></h3>
+                
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Generalized anxiety disorder 7 item (GAD-7)</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Patient Health Questionnaire 2 item (PHQ-2) [Reported]</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Alcohol Use Disorder Identification Test - Consumption [AUDIT-C]</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Lipid panel with direct LDL - Serum or Plasma</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">CBC panel - Blood by Automated count</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Humiliation, Afraid, Rape, and Kick questionnaire [HARK]</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Patient Health Questionnaire 2 item (PHQ-2) [Reported]</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Alcohol Use Disorder Identification Test - Consumption [AUDIT-C]</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Generalized anxiety disorder 7 item (GAD-7)</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Humiliation, Afraid, Rape, and Kick questionnaire [HARK]</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Drug Abuse Screening Test-10 [DAST-10]</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Generalized anxiety disorder 7 item (GAD-7)</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Humiliation, Afraid, Rape, and Kick questionnaire [HARK]</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Patient Health Questionnaire 2 item (PHQ-2) [Reported]</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Alcohol Use Disorder Identification Test - Consumption [AUDIT-C]</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Lipid panel with direct LDL - Serum or Plasma</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Patient Health Questionnaire 2 item (PHQ-2) [Reported]</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Generalized anxiety disorder 7 item (GAD-7)</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Humiliation, Afraid, Rape, and Kick questionnaire [HARK]</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Patient Health Questionnaire 2 item (PHQ-2) [Reported]</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">CBC panel - Blood by Automated count</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Patient Health Questionnaire 2 item (PHQ-2) [Reported]</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Drug Abuse Screening Test-10 [DAST-10]</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Lipid panel with direct LDL - Serum or Plasma</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Patient Health Questionnaire 2 item (PHQ-2) [Reported]</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+            </div>
+        
+        <div class="section"><h3>Care Plans</h3><p class="empty">No data</p></div>
+        
+            <div class="section">
+                <h3>Social History <span class="count">(1 items, 0/1 matched)</span></h3>
+                
+                <div class="item item-miss-minor">
+                    <div class="item-main">
+                        <span class="badge priority-should">SHOULD</span>
+                        <span class="badge miss-minor">➖ Not mentioned</span>
+                        <span class="desc">Tobacco smoking status NHIS</span>
+                        <span class="code">72166-2</span>
+                    </div>
+                    <div class="item-meta"> <span class="value">Never smoked tobacco (finding) </span></div>
+                </div>
+            
+            </div>
+        
+        
+            <div class="section">
+                <h3>Allergies <span class="count">(1 items, 1/1 matched)</span></h3>
+                
+                <div class="item item-match">
+                    <div class="item-main">
+                        <span class="badge priority-must">MUST</span>
+                        <span class="badge match">✅ Found</span>
+                        <span class="desc">There are no current allergies at the time of this document&#x27;s creation.</span>
+                        
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+            </div>
+        
+        
+            <div class="section">
+                <h3>Functional Status <span class="count">(20 items, 0/20 matched)</span></h3>
+                
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Generalized anxiety disorder 7 item (GAD-7) total score [Reported.PHQ]</span>
+                        <span class="code">70274-6</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Patient Health Questionnaire 2 item (PHQ-2) total score [Reported]</span>
+                        <span class="code">55758-7</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Total score [AUDIT-C]</span>
+                        <span class="code">75626-2</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Total score [HARK]</span>
+                        <span class="code">76504-0</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Patient Health Questionnaire 2 item (PHQ-2) total score [Reported]</span>
+                        <span class="code">55758-7</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Total score [AUDIT-C]</span>
+                        <span class="code">75626-2</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Generalized anxiety disorder 7 item (GAD-7) total score [Reported.PHQ]</span>
+                        <span class="code">70274-6</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Total score [HARK]</span>
+                        <span class="code">76504-0</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Total score [DAST-10]</span>
+                        <span class="code">82667-7</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Generalized anxiety disorder 7 item (GAD-7) total score [Reported.PHQ]</span>
+                        <span class="code">70274-6</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Total score [HARK]</span>
+                        <span class="code">76504-0</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Patient Health Questionnaire 2 item (PHQ-2) total score [Reported]</span>
+                        <span class="code">55758-7</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Total score [AUDIT-C]</span>
+                        <span class="code">75626-2</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Patient Health Questionnaire 2 item (PHQ-2) total score [Reported]</span>
+                        <span class="code">55758-7</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Generalized anxiety disorder 7 item (GAD-7) total score [Reported.PHQ]</span>
+                        <span class="code">70274-6</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Total score [HARK]</span>
+                        <span class="code">76504-0</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Patient Health Questionnaire 2 item (PHQ-2) total score [Reported]</span>
+                        <span class="code">55758-7</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Patient Health Questionnaire 2 item (PHQ-2) total score [Reported]</span>
+                        <span class="code">55758-7</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Total score [DAST-10]</span>
+                        <span class="code">82667-7</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+                <div class="item item-exclude">
+                    <div class="item-main">
+                        <span class="badge priority-exclude">EXCLUDE</span>
+                        <span class="badge exclude">🚫 Excluded background</span>
+                        <span class="desc">Patient Health Questionnaire 2 item (PHQ-2) total score [Reported]</span>
+                        <span class="code">55758-7</span>
+                    </div>
+                    <div class="item-meta"> </div>
+                </div>
+            
+            </div>
+        
+    </div>
+    <div class="panel">
+        <div class="panel-title">💬 Synthetic Conversation</div>
+        <div class="line doctor"><span class="speaker doc">D:</span> Hi there, what brings you in today?</div>
+<div class="line patient"><span class="speaker pat">P:</span> Hi, um, I&#x27;ve been feeling really under the weather lately. I have a fever, this dry cough that won&#x27;t quit, and I&#x27;ve been really tired. I also noticed my sense of smell and taste have kind of disappeared.</div>
+<div class="line doctor"><span class="speaker doc">D:</span> I&#x27;m sorry to hear that. Let&#x27;s go through this step by step. How long have you been experiencing these symptoms?</div>
+<div class="line patient"><span class="speaker pat">P:</span> Uh, it&#x27;s been about a week now, I think. It just kind of hit me all at once.</div>
+<div class="line doctor"><span class="speaker doc">D:</span> Okay, and have you had any shortness of breath or sore throat during this time?</div>
+<div class="line patient"><span class="speaker pat">P:</span> Yeah, I&#x27;ve been finding it hard to catch my breath sometimes, and my throat&#x27;s been pretty scratchy.</div>
+<div class="line doctor"><span class="speaker doc">D:</span> I see. Have you experienced any body aches or headaches?</div>
+<div class="line patient"><span class="speaker pat">P:</span> Oh yeah, my whole body just feels, like, really achy and I&#x27;ve had some headaches too.</div>
+<div class="line doctor"><span class="speaker doc">D:</span> Alright, let&#x27;s talk about exposure. Have you been in contact with anyone who has COVID-19 or who has been sick recently?</div>
+<div class="line patient"><span class="speaker pat">P:</span> Uh, no, not that I know of. I’ve been pretty much keeping to myself lately.</div>
+<div class="line doctor"><span class="speaker doc">D:</span> Okay, that&#x27;s good to know. Have you had any chest pain or rashes?</div>
+<div class="line patient"><span class="speaker pat">P:</span> No chest pain or rashes.</div>
+<div class="line doctor"><span class="speaker doc">D:</span> Alright, now I need to ask about your medical history. Do you have any history of viral sinusitis or acute viral pharyngitis?</div>
+<div class="line patient"><span class="speaker pat">P:</span> Yeah, I’ve had sinusitis and pharyngitis in the past, but not like this.</div>
+<div class="line doctor"><span class="speaker doc">D:</span> Any history of gingivitis or gingival disease?</div>
+<div class="line patient"><span class="speaker pat">P:</span> Yes, unfortunately, I’ve had gingivitis before.</div>
+<div class="line doctor"><span class="speaker doc">D:</span> How about colon polyps?</div>
+<div class="line patient"><span class="speaker pat">P:</span> No, I haven&#x27;t had that.</div>
+<div class="line doctor"><span class="speaker doc">D:</span> Have you been diagnosed with severe anxiety or experienced panic attacks?</div>
+<div class="line patient"><span class="speaker pat">P:</span> Uh, yeah, I do have some pretty severe anxiety sometimes.</div>
+<div class="line doctor"><span class="speaker doc">D:</span> I understand. Let&#x27;s review your medications. Are you currently taking Amoxicillin with Clavulanate or Sodium Fluoride Oral Gel?</div>
+<div class="line patient"><span class="speaker pat">P:</span> Yes, I&#x27;m taking both of those. The Amoxicillin was for an infection, and the fluoride gel is for my teeth.</div>
+<div class="line doctor"><span class="speaker doc">D:</span> Do you have any allergies?</div>
+<div class="line patient"><span class="speaker pat">P:</span> No, I don&#x27;t have any allergies that I know of.</div>
+<div class="line doctor"><span class="speaker doc">D:</span> Okay, thanks for confirming. I also need to ask about your social history. Do you smoke tobacco?</div>
+<div class="line patient"><span class="speaker pat">P:</span> No, I&#x27;ve never smoked tobacco.</div>
+<div class="line doctor"><span class="speaker doc">D:</span> And what about alcohol consumption?</div>
+<div class="line patient"><span class="speaker pat">P:</span> Um, I guess I drink more than I should sometimes. It helps with the stress, you know?</div>
+<div class="line doctor"><span class="speaker doc">D:</span> I understand. Are you currently working?</div>
+<div class="line patient"><span class="speaker pat">P:</span> Yes, I&#x27;m working part-time right now. It&#x27;s been hard to manage with everything going on.</div>
+<div class="line doctor"><span class="speaker doc">D:</span> Have you experienced any intimate partner abuse or stress-related issues?</div>
+<div class="line patient"><span class="speaker pat">P:</span> Um, yeah, I’ve been in some tough situations before, and I do feel stressed quite often.</div>
+<div class="line doctor"><span class="speaker doc">D:</span> I appreciate you sharing that. Just to confirm, you&#x27;re not in the labor force full-time, right?</div>
+<div class="line patient"><span class="speaker pat">P:</span> Right, I&#x27;m only working part-time at the moment.</div>
+<div class="line doctor"><span class="speaker doc">D:</span> Also, I need to ask, have you had a tubal ligation?</div>
+<div class="line patient"><span class="speaker pat">P:</span> Yes, a while back.</div>
+<div class="line doctor"><span class="speaker doc">D:</span> And how about your education? Did you complete high school?</div>
+<div class="line patient"><span class="speaker pat">P:</span> Yeah, I finished high school, but that&#x27;s it.</div>
+<div class="line doctor"><span class="speaker doc">D:</span> Got it. I also need to check, do you experience any social isolation or limited social contact?</div>
+<div class="line patient"><span class="speaker pat">P:</span> Yeah, I guess you could say that. I don&#x27;t see many people these days.</div>
+<div class="line doctor"><span class="speaker doc">D:</span> Lastly, have you noticed any changes in your toenails, like discoloration?</div>
+<div class="line patient"><span class="speaker pat">P:</span> Actually, yeah, I have. My toenails have turned this weird yellow color and it&#x27;s kind of freaking me out.</div>
+<div class="line doctor"><span class="speaker doc">D:</span> Thank you for letting me know. We&#x27;ll take a closer look at that. Before we wrap up, I also wanted to touch base on your immunizations. Have you had your flu shots and the COVID-19 vaccine?</div>
+<div class="line patient"><span class="speaker pat">P:</span> Yes, I&#x27;ve had both the flu shot and the COVID vaccine.</div>
+<div class="line doctor"><span class="speaker doc">D:</span> Great, that&#x27;s important. Based on what you&#x27;ve told me, it sounds like we need to consider the possibility of COVID-19 and also investigate those toenail changes further. We&#x27;ll get you tested and go from there. Does that sound okay?</div>
+<div class="line patient"><span class="speaker pat">P:</span> Yeah, that makes sense. Thank you for going through everything with me.</div>
+<div class="line doctor"><span class="speaker doc">D:</span> You&#x27;re welcome. We&#x27;ll take good care of you. If you have any more questions or concerns, just let us know.</div>
+<div class="line patient"><span class="speaker pat">P:</span> Thank you. I really appreciate it.</div>
+    </div>
+</div>
+</body>
+</html>

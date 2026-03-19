@@ -1,0 +1,65 @@
+SYMPTOM_LIBRARY = {
+    "COVID_CORE_RESPIRATORY": [
+        "Sore throat (stabbing/razor-blade pain)",
+        "Dry, hacking cough",
+        "Persistent tickle in throat",
+        "Low-grade fever (100.4F - 102F)",
+        "Subjective fever (feeling hot/burning up)",
+        "Chills and rigors",
+        "Nasal congestion (sinus pressure)",
+        "Rhinorrhea (runny nose)",
+        "Frequent sneezing"
+    ],
+    "COVID_CORE_SYSTEMIC": [
+        "Profound fatigue (bone-tired)",
+        "General malaise (feeling wiped out)",
+        "Myalgia (deep muscle aches in back/thighs)",
+        "Frontal headache (throbbing pressure)",
+        "Brain fog (mental cloudiness)"
+    ],
+    "HIGH_SPECIFICITY_SENSORY": [
+        "Anosmia (total loss of smell)",
+        "Ageusia (total loss of taste)",
+        "Dizziness/Lightheadedness upon standing"
+    ],
+    "EMERGENCY_RED_FLAGS": [
+        "Dyspnea (shortness of breath)",
+        "Chest tightness/pressure",
+        "Inability to stay awake",
+        "Cyanosis (bluish tint to lips/nails)",
+        "Severe confusion"
+    ],
+    "ATYPICAL_GI_DERM": [
+        "Nausea/Feeling sick to stomach",
+        "Diarrhea (loose/watery stools)",
+        "Anorexia (total loss of appetite)",
+        "Watery/Itchy eyes (Conjunctivitis)",
+        "Skin rash or hives",
+        "Discolored toes (COVID toes)"
+    ],
+    "NON_COVID_DIFFERENTIALS": {
+        "CARDIAC": [
+            "Palpitations (heart skipping beats)",
+            "Peripheral edema (swollen ankles)",
+            "Orthopnea (breathing trouble while lying flat)"
+        ],
+        "MUSCULOSKELETAL": [
+            "Arthralgia (stiff/painful joints)",
+            "Lower back strain",
+            "Sciatica (shooting leg pain)"
+        ],
+        "PSYCH": [
+            "Anxiety/Racing thoughts",
+            "Insomnia (can't fall asleep)",
+            "Work-related stress"
+        ],
+        "ENT": [
+            "Tinnitus (ringing in ears)",
+            "Otalgia (ear ache/pressure)"
+        ]
+    }
+}
+
+# Example Sampling Logic for your Agent:
+# positive = random.sample(SYMPTOM_LIBRARY["COVID_CORE_RESPIRATORY"], 2)
+# negative = random.sample(SYMPTOM_LIBRARY["EMERGENCY_RED_FLAGS"], 2)

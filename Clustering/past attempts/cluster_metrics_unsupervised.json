@@ -1,0 +1,135 @@
+{
+  "algorithm": "UMAP + HDBSCAN (EOM)",
+  "embedding": "One-hot (70\u00d73) + ClinicalBERT (768)",
+  "normalisation": "Z-score (independent)",
+  "umap_n_neighbors": 15,
+  "umap_n_components": 10,
+  "umap_min_dist": 0.0,
+  "umap_metric": "euclidean",
+  "hdbscan_min_cluster_size": 15,
+  "hdbscan_min_samples": 5,
+  "hdbscan_cluster_selection_method": "eom",
+  "n_patients": 500,
+  "n_clusters": 6,
+  "n_noise": 0,
+  "silhouette": 0.9482032656669617,
+  "adjusted_rand_index": 0.7316120793286567,
+  "normalized_mutual_info": 0.8800981991118146,
+  "novel_recall": 1.0,
+  "per_cluster": {
+    "0": {
+      "size": 51,
+      "purity": 0.9804,
+      "dominant_type": "novel_virus",
+      "composition": {
+        "differential": 1,
+        "novel_virus": 50
+      },
+      "detail_composition": {
+        "musculoskeletal": 1,
+        "novel_virus": 50
+      }
+    },
+    "1": {
+      "size": 55,
+      "purity": 1.0,
+      "dominant_type": "gastrointestinal",
+      "composition": {
+        "differential": 55
+      },
+      "detail_composition": {
+        "gastrointestinal": 55
+      }
+    },
+    "2": {
+      "size": 29,
+      "purity": 1.0,
+      "dominant_type": "dermatological",
+      "composition": {
+        "differential": 29
+      },
+      "detail_composition": {
+        "dermatological": 29
+      }
+    },
+    "3": {
+      "size": 314,
+      "purity": 0.8025,
+      "dominant_type": "healthy",
+      "composition": {
+        "differential": 62,
+        "healthy": 252
+      },
+      "detail_composition": {
+        "musculoskeletal": 62,
+        "healthy": 252
+      }
+    },
+    "4": {
+      "size": 16,
+      "purity": 1.0,
+      "dominant_type": "neurological",
+      "composition": {
+        "differential": 16
+      },
+      "detail_composition": {
+        "neurological": 16
+      }
+    },
+    "5": {
+      "size": 35,
+      "purity": 1.0,
+      "dominant_type": "flu_like",
+      "composition": {
+        "flu_like": 35
+      },
+      "detail_composition": {
+        "flu_like": 35
+      }
+    }
+  },
+  "per_category_recall": {
+    "dermatological": {
+      "total": 29,
+      "best_cluster_count": 29,
+      "recall": 1.0,
+      "primary_cluster": 2
+    },
+    "flu_like": {
+      "total": 35,
+      "best_cluster_count": 35,
+      "recall": 1.0,
+      "primary_cluster": 5
+    },
+    "gastrointestinal": {
+      "total": 55,
+      "best_cluster_count": 55,
+      "recall": 1.0,
+      "primary_cluster": 1
+    },
+    "healthy": {
+      "total": 252,
+      "best_cluster_count": 252,
+      "recall": 1.0,
+      "primary_cluster": 3
+    },
+    "musculoskeletal": {
+      "total": 63,
+      "best_cluster_count": 62,
+      "recall": 0.9841,
+      "primary_cluster": 3
+    },
+    "neurological": {
+      "total": 16,
+      "best_cluster_count": 16,
+      "recall": 1.0,
+      "primary_cluster": 4
+    },
+    "novel_virus": {
+      "total": 50,
+      "best_cluster_count": 50,
+      "recall": 1.0,
+      "primary_cluster": 0
+    }
+  }
+}

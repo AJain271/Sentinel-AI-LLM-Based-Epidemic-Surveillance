@@ -1,0 +1,599 @@
+{
+  "version": "v2",
+  "notes": [
+    "Curated symptom catalog used as the master vocabulary for scenario generation.",
+    "Seeded with CDC COVID symptoms and extended with common primary-care symptoms.",
+    "patient_phrases are templates/examples to encourage Natural Patient Language."
+  ],
+  "symptoms": [
+    {
+      "id": "fever",
+      "label": "Fever",
+      "category": "constitutional",
+      "covid_salient": true,
+      "keywords": ["fever", "febrile", "high temperature", "temp", "temperature"],
+      "patient_phrases": [
+        "I've been feeling really hot since yesterday",
+        "I keep getting these waves of heat and then sweating",
+        "I feel like I'm running a fever"
+      ]
+    },
+    {
+      "id": "chills",
+      "label": "Chills",
+      "category": "constitutional",
+      "covid_salient": true,
+      "keywords": ["chills", "shivering", "rigors"],
+      "patient_phrases": [
+        "I was shivering under blankets even though the room was warm",
+        "I keep getting chills and shaking",
+        "I feel cold and shaky for no reason"
+      ]
+    },
+    {
+      "id": "fatigue",
+      "label": "Fatigue",
+      "category": "constitutional",
+      "covid_salient": true,
+      "keywords": ["fatigue", "tired", "exhaustion", "malaise"],
+      "patient_phrases": [
+        "I've been wiped out",
+        "I feel exhausted just doing normal stuff",
+        "I'm more tired than usual"
+      ]
+    },
+    {
+      "id": "body_aches",
+      "label": "Body aches",
+      "category": "musculoskeletal",
+      "covid_salient": true,
+      "keywords": ["body aches", "aches", "myalgia", "muscle aches", "muscle pain"],
+      "patient_phrases": [
+        "My whole body feels sore",
+        "It feels like I got hit by a truck",
+        "My muscles are aching"
+      ]
+    },
+    {
+      "id": "headache",
+      "label": "Headache",
+      "category": "neurologic",
+      "covid_salient": true,
+      "keywords": ["headache", "head pain", "migraine"],
+      "patient_phrases": [
+        "I've had a headache that won't go away",
+        "My head has been pounding",
+        "It feels like pressure in my head"
+      ]
+    },
+    {
+      "id": "sore_throat",
+      "label": "Sore throat",
+      "category": "respiratory",
+      "covid_salient": true,
+      "keywords": ["sore throat", "throat pain", "pharyngitis"],
+      "patient_phrases": [
+        "My throat hurts when I swallow",
+        "My throat feels scratchy",
+        "It feels raw back there"
+      ]
+    },
+    {
+      "id": "cough",
+      "label": "Cough",
+      "category": "respiratory",
+      "covid_salient": true,
+      "keywords": ["cough", "coughing"],
+      "patient_phrases": [
+        "I've been coughing a lot",
+        "I can't stop coughing",
+        "I keep having coughing fits"
+      ]
+    },
+    {
+      "id": "dry_cough",
+      "label": "Dry cough",
+      "category": "respiratory",
+      "covid_salient": true,
+      "keywords": ["dry cough", "nonproductive cough", "non-productive cough", "no phlegm"],
+      "patient_phrases": [
+        "It's like a dry cough with nothing coming up",
+        "I'm coughing but there's no mucus",
+        "It's that annoying tickle cough"
+      ]
+    },
+    {
+      "id": "productive_cough",
+      "label": "Cough with phlegm",
+      "category": "respiratory",
+      "covid_salient": false,
+      "keywords": ["productive cough", "phlegm", "mucus", "sputum"],
+      "patient_phrases": [
+        "I've been coughing stuff up",
+        "There's mucus when I cough",
+        "I'm bringing up phlegm"
+      ]
+    },
+    {
+      "id": "shortness_of_breath",
+      "label": "Shortness of breath",
+      "category": "respiratory",
+      "covid_salient": true,
+      "keywords": ["shortness of breath", "dyspnea", "breathless", "difficulty breathing"],
+      "patient_phrases": [
+        "I get out of breath doing simple things",
+        "It feels like I can't get a full breath",
+        "Walking up stairs makes me really winded"
+      ]
+    },
+    {
+      "id": "chest_tightness",
+      "label": "Chest tightness",
+      "category": "respiratory",
+      "covid_salient": false,
+      "keywords": ["chest tightness", "tight chest", "chest feels tight"],
+      "patient_phrases": [
+        "My chest feels kind of tight",
+        "It feels like someone is sitting on my chest a little",
+        "There's a tight feeling when I breathe"
+      ]
+    },
+    {
+      "id": "chest_pain",
+      "label": "Chest pain",
+      "category": "cardiopulmonary",
+      "covid_salient": false,
+      "keywords": ["chest pain", "chest hurts", "pleuritic pain"],
+      "patient_phrases": [
+        "My chest hurts",
+        "I get pain in my chest when I take a deep breath",
+        "I've had chest pain on and off"
+      ]
+    },
+    {
+      "id": "wheezing",
+      "label": "Wheezing",
+      "category": "respiratory",
+      "covid_salient": false,
+      "keywords": ["wheezing", "wheeze", "whistling when breathing"],
+      "patient_phrases": [
+        "I hear a whistling sound when I breathe",
+        "My breathing sounds wheezy",
+        "It feels like my chest is rattly"
+      ]
+    },
+    {
+      "id": "congestion",
+      "label": "Nasal congestion",
+      "category": "respiratory",
+      "covid_salient": true,
+      "keywords": ["congestion", "stuffy nose", "nasal congestion", "blocked nose"],
+      "patient_phrases": [
+        "My nose feels stuffed up",
+        "I can't breathe through my nose",
+        "I've been really congested"
+      ]
+    },
+    {
+      "id": "runny_nose",
+      "label": "Runny nose",
+      "category": "respiratory",
+      "covid_salient": true,
+      "keywords": ["runny nose", "rhinorrhea", "dripping nose"],
+      "patient_phrases": [
+        "My nose has been running nonstop",
+        "I'm constantly wiping my nose",
+        "It's just been dripping"
+      ]
+    },
+    {
+      "id": "loss_of_taste",
+      "label": "Loss of taste",
+      "category": "neurologic",
+      "covid_salient": true,
+      "keywords": ["loss of taste", "can't taste", "ageusia", "taste is gone"],
+      "patient_phrases": [
+        "Food tastes like nothing",
+        "I can't really taste my food",
+        "Everything tastes dull"
+      ]
+    },
+    {
+      "id": "loss_of_smell",
+      "label": "Loss of smell",
+      "category": "neurologic",
+      "covid_salient": true,
+      "keywords": ["loss of smell", "can't smell", "anosmia", "smell is gone"],
+      "patient_phrases": [
+        "I can't smell anything",
+        "Even strong smells don't register",
+        "My sense of smell is basically gone"
+      ]
+    },
+    {
+      "id": "nausea",
+      "label": "Nausea",
+      "category": "gastrointestinal",
+      "covid_salient": true,
+      "keywords": ["nausea", "nauseous", "queasy"],
+      "patient_phrases": [
+        "My stomach feels queasy",
+        "I've been feeling nauseous",
+        "I feel like I might throw up"
+      ]
+    },
+    {
+      "id": "vomiting",
+      "label": "Vomiting",
+      "category": "gastrointestinal",
+      "covid_salient": true,
+      "keywords": ["vomiting", "threw up", "throwing up", "emesis"],
+      "patient_phrases": [
+        "I threw up",
+        "I've been vomiting",
+        "I couldn't keep anything down"
+      ]
+    },
+    {
+      "id": "diarrhea",
+      "label": "Diarrhea",
+      "category": "gastrointestinal",
+      "covid_salient": true,
+      "keywords": ["diarrhea", "loose stools", "watery stools"],
+      "patient_phrases": [
+        "I've had diarrhea",
+        "My stomach has been messed up and I've had loose stools",
+        "I've been running to the bathroom"
+      ]
+    },
+    {
+      "id": "abdominal_pain",
+      "label": "Abdominal pain",
+      "category": "gastrointestinal",
+      "covid_salient": false,
+      "keywords": ["abdominal pain", "stomach pain", "belly pain", "abdomen pain"],
+      "patient_phrases": [
+        "My stomach hurts",
+        "I've had pain in my belly",
+        "It cramps in my stomach"
+      ]
+    },
+    {
+      "id": "loss_of_appetite",
+      "label": "Loss of appetite",
+      "category": "gastrointestinal",
+      "covid_salient": false,
+      "keywords": ["loss of appetite", "no appetite", "not hungry", "anorexia"],
+      "patient_phrases": [
+        "I haven't really felt like eating",
+        "Food doesn't sound good",
+        "I've had no appetite"
+      ]
+    },
+    {
+      "id": "dizziness",
+      "label": "Dizziness",
+      "category": "neurologic",
+      "covid_salient": false,
+      "keywords": ["dizziness", "lightheaded", "vertigo"],
+      "patient_phrases": [
+        "I feel lightheaded when I stand up",
+        "I've been dizzy off and on",
+        "The room feels a little spinny sometimes"
+      ]
+    },
+    {
+      "id": "syncope",
+      "label": "Fainting",
+      "category": "neurologic",
+      "covid_salient": false,
+      "keywords": ["fainting", "passed out", "syncope"],
+      "patient_phrases": [
+        "I passed out",
+        "I fainted",
+        "I blacked out for a second"
+      ]
+    },
+    {
+      "id": "palpitations",
+      "label": "Palpitations",
+      "category": "cardiovascular",
+      "covid_salient": false,
+      "keywords": ["palpitations", "heart racing", "fluttering heart"],
+      "patient_phrases": [
+        "My heart feels like it's racing",
+        "I get this fluttering feeling in my chest",
+        "My heartbeat feels weird sometimes"
+      ]
+    },
+    {
+      "id": "rash",
+      "label": "Rash",
+      "category": "dermatologic",
+      "covid_salient": false,
+      "keywords": ["rash", "hives", "itchy bumps", "skin rash"],
+      "patient_phrases": [
+        "I broke out in a rash",
+        "My skin got these itchy bumps",
+        "There's a rash on my skin"
+      ]
+    },
+    {
+      "id": "itching",
+      "label": "Itching",
+      "category": "dermatologic",
+      "covid_salient": false,
+      "keywords": ["itching", "itchy", "pruritus"],
+      "patient_phrases": [
+        "My skin has been really itchy",
+        "I've been scratching a lot",
+        "It feels itchy all over"
+      ]
+    },
+    {
+      "id": "joint_pain",
+      "label": "Joint pain",
+      "category": "musculoskeletal",
+      "covid_salient": false,
+      "keywords": ["joint pain", "arthralgia", "knees hurt", "hips hurt"],
+      "patient_phrases": [
+        "My joints have been hurting",
+        "My knees and elbows feel achy",
+        "My joints feel sore"
+      ]
+    },
+    {
+      "id": "back_pain",
+      "label": "Back pain",
+      "category": "musculoskeletal",
+      "covid_salient": false,
+      "keywords": ["back pain", "low back pain", "back hurts"],
+      "patient_phrases": [
+        "My back has been hurting",
+        "I have lower back pain",
+        "My back feels sore"
+      ]
+    },
+    {
+      "id": "sneezing",
+      "label": "Sneezing",
+      "category": "respiratory",
+      "covid_salient": false,
+      "keywords": ["sneezing", "sneeze"],
+      "patient_phrases": [
+        "I've been sneezing a lot",
+        "I can't stop sneezing",
+        "I've had sneezing fits"
+      ]
+    },
+    {
+      "id": "ear_pain",
+      "label": "Ear pain",
+      "category": "ent",
+      "covid_salient": false,
+      "keywords": ["ear pain", "earache", "ear hurts"],
+      "patient_phrases": [
+        "My ear has been hurting",
+        "It feels like an earache",
+        "There's pain in my ear"
+      ]
+    },
+    {
+      "id": "sinus_pressure",
+      "label": "Sinus pressure",
+      "category": "ent",
+      "covid_salient": false,
+      "keywords": ["sinus pressure", "sinus pain", "pressure in face"],
+      "patient_phrases": [
+        "I feel pressure in my face",
+        "My cheeks and forehead feel heavy",
+        "It feels like sinus pressure"
+      ]
+    },
+    {
+      "id": "eye_pain",
+      "label": "Eye pain",
+      "category": "ophthalmologic",
+      "covid_salient": false,
+      "keywords": ["eye pain", "eyes hurt", "pain behind eyes"],
+      "patient_phrases": [
+        "My eyes hurt",
+        "I have pain behind my eyes",
+        "It hurts when I move my eyes"
+      ]
+    },
+    {
+      "id": "red_eyes",
+      "label": "Red eyes",
+      "category": "ophthalmologic",
+      "covid_salient": false,
+      "keywords": ["red eyes", "conjunctivitis", "pink eye"],
+      "patient_phrases": [
+        "My eyes look red",
+        "My eyes feel irritated and red",
+        "It looks like pink eye"
+      ]
+    },
+    {
+      "id": "diaphoresis",
+      "label": "Sweating",
+      "category": "constitutional",
+      "covid_salient": false,
+      "keywords": ["sweating", "diaphoresis", "night sweats"],
+      "patient_phrases": [
+        "I've been sweating a lot",
+        "I wake up sweaty",
+        "I keep breaking into a sweat"
+      ]
+    },
+    {
+      "id": "sleep_disturbance",
+      "label": "Trouble sleeping",
+      "category": "constitutional",
+      "covid_salient": false,
+      "keywords": ["trouble sleeping", "can't sleep", "insomnia"],
+      "patient_phrases": [
+        "I haven't been sleeping well",
+        "I keep waking up at night",
+        "I can't fall asleep"
+      ]
+    },
+    {
+      "id": "anxiety",
+      "label": "Anxiety",
+      "category": "psychiatric",
+      "covid_salient": false,
+      "keywords": ["anxiety", "anxious", "panic"],
+      "patient_phrases": [
+        "I've been really anxious",
+        "I feel on edge",
+        "I've been panicking a bit"
+      ]
+    },
+    {
+      "id": "confusion",
+      "label": "Confusion",
+      "category": "neurologic",
+      "covid_salient": false,
+      "keywords": ["confusion", "confused", "disoriented"],
+      "patient_phrases": [
+        "I've felt kind of foggy",
+        "I feel out of it",
+        "It's hard to think clearly"
+      ]
+    },
+    {
+      "id": "numbness_tingling",
+      "label": "Numbness or tingling",
+      "category": "neurologic",
+      "covid_salient": false,
+      "keywords": ["numbness", "tingling", "pins and needles", "paresthesia"],
+      "patient_phrases": [
+        "My hands feel tingly",
+        "I get pins and needles sometimes",
+        "It feels numb in my fingers"
+      ]
+    },
+    {
+      "id": "weakness",
+      "label": "Weakness",
+      "category": "neurologic",
+      "covid_salient": false,
+      "keywords": ["weakness", "weak", "feels weak"],
+      "patient_phrases": [
+        "I feel weak",
+        "I feel like I don't have any strength",
+        "My legs feel weak"
+      ]
+    },
+    {
+      "id": "dehydration",
+      "label": "Dehydration",
+      "category": "constitutional",
+      "covid_salient": false,
+      "keywords": ["dehydration", "dehydrated", "dry mouth"],
+      "patient_phrases": [
+        "My mouth feels really dry",
+        "I feel dehydrated",
+        "I don't think I've been drinking enough"
+      ]
+    },
+    {
+      "id": "urinary_frequency",
+      "label": "Urinary frequency",
+      "category": "genitourinary",
+      "covid_salient": false,
+      "keywords": ["urinary frequency", "peeing a lot", "frequent urination"],
+      "patient_phrases": [
+        "I've been going to the bathroom a lot",
+        "I'm peeing more than usual",
+        "I have to pee all the time"
+      ]
+    },
+    {
+      "id": "dysuria",
+      "label": "Painful urination",
+      "category": "genitourinary",
+      "covid_salient": false,
+      "keywords": ["dysuria", "burning urination", "burning when peeing", "painful urination"],
+      "patient_phrases": [
+        "It burns when I pee",
+        "Peeing hurts",
+        "I get a burning feeling when I go"
+      ]
+    },
+    {
+      "id": "hematuria",
+      "label": "Blood in urine",
+      "category": "genitourinary",
+      "covid_salient": false,
+      "keywords": ["hematuria", "blood in urine", "pink urine"],
+      "patient_phrases": [
+        "I saw blood in my urine",
+        "My pee looked pink",
+        "There was blood when I went to the bathroom"
+      ]
+    },
+    {
+      "id": "constipation",
+      "label": "Constipation",
+      "category": "gastrointestinal",
+      "covid_salient": false,
+      "keywords": ["constipation", "constipated", "can't poop", "no bowel movement"],
+      "patient_phrases": [
+        "I've been constipated",
+        "I haven't had a bowel movement in a few days",
+        "I've been having trouble going"
+      ]
+    },
+    {
+      "id": "heartburn",
+      "label": "Heartburn",
+      "category": "gastrointestinal",
+      "covid_salient": false,
+      "keywords": ["heartburn", "acid reflux", "reflux", "gerd"],
+      "patient_phrases": [
+        "I get this burning in my chest after eating",
+        "It feels like acid coming up",
+        "I've had bad heartburn"
+      ]
+    },
+    {
+      "id": "swelling_legs",
+      "label": "Leg swelling",
+      "category": "cardiovascular",
+      "covid_salient": false,
+      "keywords": ["leg swelling", "swollen legs", "edema", "ankle swelling"],
+      "patient_phrases": [
+        "My ankles have been swelling",
+        "My legs look puffy",
+        "My feet have been swollen"
+      ]
+    },
+    {
+      "id": "leg_pain",
+      "label": "Leg pain",
+      "category": "musculoskeletal",
+      "covid_salient": false,
+      "keywords": ["leg pain", "calf pain", "leg hurts"],
+      "patient_phrases": [
+        "My leg has been hurting",
+        "I have pain in my calf",
+        "My leg hurts when I walk"
+      ]
+    },
+    {
+      "id": "bleeding",
+      "label": "Unusual bleeding",
+      "category": "hematologic",
+      "covid_salient": false,
+      "keywords": ["bleeding", "easy bruising", "bruising"],
+      "patient_phrases": [
+        "I've been bruising really easily",
+        "I've had unusual bleeding",
+        "I keep getting bruises"
+      ]
+    }
+  ]
+}
+

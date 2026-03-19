@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>v3 Pipeline Viewer — Zina602 Beatty507</title>
+<style>
+:root {
+  --bg: #0f1117; --panel: #1a1d27; --border: #2a2d3a;
+  --text: #e1e4eb; --muted: #8b8fa3; --accent: #6c63ff;
+  --green: #22c55e; --red: #ef4444; --yellow: #f59e0b;
+  --purple: #a855f7; --blue: #3b82f6; --orange: #f97316;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Inter','Segoe UI',system-ui,sans-serif;
+  background: var(--bg); color: var(--text); line-height:1.5;
+}
+.header {
+  background: linear-gradient(135deg,#1a1d27,#2a1d3a);
+  padding: 16px 24px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 16px;
+}
+.header h1 {
+  font-size:1.3rem; font-weight:700;
+  background: linear-gradient(135deg,#6c63ff,#a855f7);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+.header .meta { color:var(--muted); font-size:0.85rem; }
+
+/* Tab navigation */
+.tabs {
+  display:flex; background:var(--panel);
+  border-bottom:1px solid var(--border);
+}
+.tab {
+  padding:10px 20px; cursor:pointer; font-size:0.9rem;
+  color:var(--muted); border-bottom:2px solid transparent;
+  transition: all 0.2s;
+}
+.tab:hover { color:var(--text); }
+.tab.active {
+  color:var(--accent); border-bottom-color:var(--accent);
+  font-weight:600;
+}
+
+/* Panels */
+.tab-content { display:none; height:calc(100vh - 100px); overflow-y:auto; padding:20px; }
+.tab-content.active { display:block; }
+
+/* Profile */
+.profile-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+@media(max-width:900px) { .profile-grid { grid-template-columns:1fr; } }
+.card {
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:8px; padding:16px;
+}
+.card h3 {
+  font-size:0.95rem; color:var(--accent); margin-bottom:10px;
+  padding-bottom:6px; border-bottom:1px solid var(--border);
+}
+.card table { width:100%; }
+.card td { padding:3px 8px; font-size:0.88rem; }
+.card .lbl { color:var(--muted); width:100px; }
+
+.sym-item {
+  padding:4px 8px; margin:2px 0; border-radius:4px; font-size:0.88rem;
+}
+.sym-match { background:rgba(34,197,94,0.1); border-left:3px solid var(--green); }
+.sym-miss { background:rgba(239,68,68,0.1); border-left:3px solid var(--red); }
+.sym-neg-ok { background:rgba(34,197,94,0.05); border-left:3px solid var(--green); }
+.sym-neg-miss { background:rgba(249,158,11,0.1); border-left:3px solid var(--yellow); }
+
+.noise-group h4 { font-size:0.85rem; color:var(--muted); margin:8px 0 4px; }
+.noise-group ul { list-style:none; padding-left:0; }
+.noise-group li {
+  font-size:0.85rem; padding:2px 0; color:var(--text);
+  border-left:2px solid var(--border); padding-left:10px; margin:2px 0;
+}
+
+/* Prompt */
+.prompt-block {
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:8px; margin-bottom:16px; overflow:hidden;
+}
+.prompt-label {
+  font-size:0.8rem; font-weight:600; padding:8px 12px;
+  background:rgba(108,99,255,0.15); color:var(--accent);
+  border-bottom:1px solid var(--border);
+}
+.prompt-text {
+  padding:12px; white-space:pre-wrap; font-size:0.82rem;
+  font-family:'Cascadia Code','Fira Code','Consolas',monospace;
+  line-height:1.6; color:var(--text); max-height:600px; overflow-y:auto;
+}
+
+/* Transcript */
+.transcript-stats {
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:8px; padding:12px 16px; margin-bottom:16px;
+  display:flex; gap:20px; font-size:0.85rem;
+}
+.stat { display:flex; gap:6px; align-items:center; }
+.stat .num { font-weight:700; color:var(--accent); }
+.transcript-body {
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:8px; padding:16px;
+}
+.line { padding:6px 10px; margin:2px 0; border-radius:4px; font-size:0.9rem; }
+.doctor { background:rgba(59,130,246,0.08); }
+.patient { background:rgba(249,158,11,0.08); }
+.speaker {
+  font-weight:700; margin-right:8px; display:inline-block; min-width:24px;
+}
+.doc { color:var(--blue); }
+.pat { color:var(--yellow); }
+.other { color:var(--muted); font-style:italic; }
+.empty { color:var(--muted); font-style:italic; }
+
+.coverage-bar {
+  display:flex; align-items:center; gap:8px; margin:8px 0;
+  font-size:0.85rem;
+}
+.bar-track {
+  flex:1; height:8px; background:var(--border); border-radius:4px; overflow:hidden;
+}
+.bar-fill { height:100%; border-radius:4px; transition:width 0.3s; }
+.bar-green { background:var(--green); }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>v3 Pipeline Viewer</h1>
+  <div class="meta">Zina602 Beatty507 &nbsp;|&nbsp; Seed: 9003</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('profile')">📋 Profile</div>
+  <div class="tab" onclick="switchTab('map')">🗺️ Map</div>
+  <div class="tab" onclick="switchTab('prompt')">💬 Prompt</div>
+  <div class="tab" onclick="switchTab('transcript')">📝 Transcript</div>
+</div>
+
+<!-- ═══ PROFILE TAB ═══ -->
+<div class="tab-content active" id="tab-profile">
+  <div class="profile-grid">
+    <div class="card">
+      <h3>Demographics</h3>
+      <table><tr><td class="lbl">Name</td><td>Zina602 Beatty507</td></tr><tr><td class="lbl">Age</td><td>104</td></tr><tr><td class="lbl">Gender</td><td>Female</td></tr><tr><td class="lbl">Race</td><td>black</td></tr><tr><td class="lbl">Ethnicity</td><td>non-hispanic</td></tr><tr><td class="lbl">Location</td><td>Charleston, SC</td></tr><tr><td class="lbl">Seed</td><td>9003</td></tr></table>
+    </div>
+
+    <div class="card">
+      <h3>🟢 Present Symptoms (4/4 found in transcript)</h3>
+      <div class="coverage-bar">
+        <div class="bar-track"><div class="bar-fill bar-green"
+          style="width:100%"></div></div>
+        <span>100%</span>
+      </div>
+      <div class="sym-item sym-match">✅ Confusion/Altered mental status (feeling out of it)</div>
+<div class="sym-item sym-match">✅ Weakness (no strength in arms/legs)</div>
+<div class="sym-item sym-match">✅ Photophobia (light sensitivity/hurts to look at bright light)</div>
+<div class="sym-item sym-match">✅ Tremor (hands shaking involuntarily)</div>
+    </div>
+
+    <div class="card">
+      <h3>🔴 Negated Symptoms (patient should deny these)</h3>
+      <div class="sym-item sym-neg-ok">✅ Numbness/Tingling (pins and needles in hands/feet)</div>
+<div class="sym-item sym-neg-ok">✅ Sleep disturbance (difficulty falling/staying asleep)</div>
+<div class="sym-item sym-neg-ok">✅ Palpitations (heart skipping beats)</div>
+    </div>
+
+    <div class="card">
+      <h3>🏥 CCDA Background Noise</h3>
+      <div class="noise-group"><h4>Conditions (5)</h4><ul><li>Hypertension</li><li>Miscarriage in first trimester</li><li>Chronic sinusitis (disorder)</li><li>Prediabetes</li><li>Stroke</li></ul></div>
+<div class="noise-group"><h4>Medications (5)</h4><ul><li>Atenolol 50 MG / Chlorthalidone 25 MG Oral Tablet</li><li>Acetaminophen 325 MG Oral Tablet</li><li>Naproxen sodium 220 MG Oral Tablet</li><li>Warfarin Sodium 5 MG Oral Tablet</li><li>Verapamil Hydrochloride 40 MG</li></ul></div>
+<div class="noise-group"><h4>Allergies (1)</h4><ul><li>There are no current allergies at the time of this document&#x27;s creation.</li></ul></div>
+<div class="noise-group"><h4>Immunizations (5)</h4><ul><li>Influenza, seasonal, injectable, preservative free</li><li>Td (adult) preservative free</li><li>Influenza, seasonal, injectable, preservative free</li><li>Influenza, seasonal, injectable, preservative free</li><li>Influenza, seasonal, injectable, preservative free</li></ul></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h3>Chief Complaint</h3>
+    <p style="font-size:1.05rem; color:var(--orange); font-weight:600;">
+      Confusion/Altered mental status (feeling out of it) + Weakness (no strength in arms/legs)
+    </p>
+  </div>
+</div>
+
+<!-- ═══ MAP TAB ═══ -->
+<div class="tab-content" id="tab-map">
+  <div class="card" style="margin-bottom:16px">
+    <h3>🗺️ Patient Location — South Carolina</h3>
+    <p style="font-size:0.88rem; color:var(--muted); margin-bottom:8px;">
+      Hospital hub: <strong style="color:var(--accent)">MUSC Health</strong>
+      (Charleston, SC)
+      &nbsp;|&nbsp; Hub ID: H5
+      &nbsp;|&nbsp; Patient coords: 32.94305, -80.0764
+    </p>
+    <div id="sc-map" style="width:100%; height:520px; border-radius:8px; border:1px solid var(--border);"></div>
+  </div>
+</div>
+
+<!-- Leaflet CSS + JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+  // SC hospital hubs
+  var hubs = [
+    {id:"H1", name:"AnMed Health Medical Center",    city:"Anderson",     lat:34.526, lng:-82.646},
+    {id:"H2", name:"Prisma Health Greenville",       city:"Greenville",   lat:34.819, lng:-82.416},
+    {id:"H3", name:"Prisma Health Richland",         city:"Columbia",     lat:34.032, lng:-81.033},
+    {id:"H4", name:"Aiken Regional Medical Center",  city:"Aiken",        lat:33.565, lng:-81.763},
+    {id:"H5", name:"MUSC Health",                    city:"Charleston",   lat:32.785, lng:-79.947},
+    {id:"H6", name:"McLeod Regional Medical Center", city:"Florence",     lat:34.192, lng:-79.765},
+    {id:"H7", name:"Grand Strand Medical Center",    city:"Myrtle Beach", lat:33.748, lng:-78.847}
+  ];
+
+  var patientLat = 32.94305;
+  var patientLng = -80.0764;
+  var patientHub = "H5";
+
+  // Wait for the map div to be visible before initializing
+  var mapInitialized = false;
+  var origSwitchTab = window.switchTab;
+
+  function initMap() {
+    if (mapInitialized) return;
+    mapInitialized = true;
+
+    var map = L.map('sc-map', {
+      zoomControl: true,
+      attributionControl: true
+    }).setView([33.85, -80.9], 7);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap &copy; CARTO',
+      maxZoom: 18
+    }).addTo(map);
+
+    // Hospital hub markers (blue circles)
+    hubs.forEach(function(h) {
+      var isActive = (h.id === patientHub);
+      var color = isActive ? '#6c63ff' : '#3b82f6';
+      var radius = isActive ? 10 : 7;
+      var opacity = isActive ? 1.0 : 0.6;
+
+      L.circleMarker([h.lat, h.lng], {
+        radius: radius,
+        fillColor: color,
+        color: '#fff',
+        weight: isActive ? 2 : 1,
+        fillOpacity: opacity
+      }).addTo(map).bindTooltip(
+        '<strong>' + h.id + ': ' + h.name + '</strong><br>' + h.city + ', SC',
+        { permanent: isActive, direction: 'top', className: 'hub-tooltip' }
+      );
+    });
+
+    // Patient marker (orange/red pulsing dot)
+    L.circleMarker([patientLat, patientLng], {
+      radius: 8,
+      fillColor: '#f97316',
+      color: '#fff',
+      weight: 2,
+      fillOpacity: 0.95
+    }).addTo(map).bindTooltip(
+      '<strong>&#128205; Patient</strong><br>' +
+      patientLat.toFixed(4) + ', ' + patientLng.toFixed(4),
+      { permanent: true, direction: 'bottom', className: 'patient-tooltip' }
+    );
+
+    // Draw a dashed line from patient to their hub
+    hubs.forEach(function(h) {
+      if (h.id === patientHub) {
+        L.polyline([[h.lat, h.lng], [patientLat, patientLng]], {
+          color: '#6c63ff',
+          weight: 1.5,
+          dashArray: '6,4',
+          opacity: 0.6
+        }).addTo(map);
+      }
+    });
+
+    setTimeout(function() { map.invalidateSize(); }, 200);
+  }
+
+  window.switchTab = function(name) {
+    document.querySelectorAll('.tab-content').forEach(function(el) { el.classList.remove('active'); });
+    document.querySelectorAll('.tab').forEach(function(el) { el.classList.remove('active'); });
+    document.getElementById('tab-' + name).classList.add('active');
+    var tabs = document.querySelectorAll('.tab');
+    var idx = {'profile':0,'map':1,'prompt':2,'transcript':3}[name];
+    if (idx !== undefined) tabs[idx].classList.add('active');
+    if (name === 'map') initMap();
+  };
+})();
+</script>
+<style>
+.hub-tooltip {
+  background: rgba(26,29,39,0.92) !important;
+  color: #e1e4eb !important;
+  border: 1px solid #6c63ff !important;
+  border-radius: 6px !important;
+  font-size: 0.82rem !important;
+  padding: 4px 8px !important;
+}
+.patient-tooltip {
+  background: rgba(249,115,22,0.92) !important;
+  color: #fff !important;
+  border: 1px solid #f97316 !important;
+  border-radius: 6px !important;
+  font-size: 0.82rem !important;
+  padding: 4px 8px !important;
+}
+.leaflet-tooltip-top:before { border-top-color: rgba(26,29,39,0.92) !important; }
+.leaflet-tooltip-bottom:before { border-bottom-color: rgba(249,115,22,0.92) !important; }
+</style>
+
+<!-- ═══ PROMPT TAB ═══ -->
+<div class="tab-content" id="tab-prompt">
+  <div class="prompt-block">
+    <div class="prompt-label">SYSTEM PROMPT (7653 chars)</div>
+    <div class="prompt-text">You are a medical transcript generator. Your job is to produce a realistic
+doctor–patient clinical encounter transcript for a patient presenting with
+neurological complaints.
+
+═══════════════════════════════════════════════════════════════
+FORMAT RULES  (follow exactly)
+═══════════════════════════════════════════════════════════════
+- Each doctor line starts with &quot;D: &quot; (capital D, colon, space).
+- Each patient line starts with &quot;P: &quot; (capital P, colon, space).
+- Alternate between D and P lines.
+- Put exactly ONE blank line between each speaker turn.
+- Do NOT include any headers, titles, labels, stage markers, or metadata.
+- Do NOT include stage directions like [coughs] or (pauses).
+- The patient should speak like a REAL person — use filler words naturally
+  (um, uh, yeah, I mean, you know, like, so, honestly, kinda).
+  Vary them; don&#x27;t over-use the same filler.
+- The patient should occasionally stumble, self-correct, or trail off
+  mid-sentence just like in a real clinical interview.
+- The doctor should be professional but warm, occasionally say &quot;OK&quot; or
+  &quot;Alright&quot; to acknowledge, and use brief clarifying follow-ups.
+
+Here is an example of the EXACT style and format to follow:
+
+D: What brought you in today?
+
+P: Sure, I&#x27;m I&#x27;m just having a lot of chest pain and and so I thought I should get it checked out.
+
+D: OK, before we start, could you remind me of your gender and age? 
+
+P: Sure 39, I&#x27;m a male.
+
+D: OK, and so when did this chest pain start?
+
+P: It started last night, but it&#x27;s becoming sharper.
+
+D: OK, and where is this pain located? 
+
+P: It&#x27;s located on the left side of my chest.
+
+D: OK, and, so how long has it been going on for then if it started last night?
+
+P: So I guess it would be a couple of hours now, maybe like 8.
+
+D: OK. Has it been constant throughout that time, or uh, or changing? 
+
+P: I would say it&#x27;s been pretty constant, yeah.
+
+D: OK, and how would you describe the pain? People will use words sometimes like sharp, burning, achy. 
+
+P: I&#x27;d say it&#x27;s pretty sharp, yeah.
+
+D: Sharp OK. Uh, anything that you have done tried since last night that&#x27;s made the pain better?
+
+P: Um not laying down helps.
+
+D: OK, so do you find laying down makes the pain worse?
+
+P: Yes, definitely.
+
+D: OK, do you find that the pain is radiating anywhere?
+
+P: No.
+
+
+
+═══════════════════════════════════════════════════════════════
+SYMPTOM RULES  (CRITICAL — read carefully)
+═══════════════════════════════════════════════════════════════
+The patient has ONLY the following symptoms.  Do NOT invent, add, or
+imply ANY symptoms beyond this exact list:
+
+   1. Confusion/Altered mental status (feeling out of it)
+   2. Weakness (no strength in arms/legs)
+   3. Photophobia (light sensitivity/hurts to look at bright light)
+   4. Tremor (hands shaking involuntarily)
+
+The parenthetical text tells YOU (the generator) which symptom is meant.
+The patient should describe each symptom naturally, the way a real person
+would in a doctor&#x27;s office.  Simple, plain language is fine — a patient
+CAN say &quot;my nose is running&quot; or &quot;I&#x27;ve got a runny nose.&quot;  What they
+should NOT do is repeat the exact clinical phrasing word-for-word from
+the list above (e.g. do not say &quot;I have rhinorrhea&quot; or &quot;I&#x27;m experiencing
+nasal congestion with sinus pressure&quot;).  Keep it conversational and
+authentic — some patients are vague, some are specific, and not every
+description needs to be creative or unusual.
+
+PACING — this is extremely important:
+- In the OPENING turn the patient mentions the chief complaint symptoms
+  (2-3 concerns that brought them in).  They may hint at feeling
+  generally unwell but must NOT list ALL their symptoms yet.
+- Each subsequent patient turn reveals AT MOST 1 new symptom, and only
+  when the doctor asks a relevant follow-up.
+- Some symptoms should emerge only after the doctor specifically asks
+  (&quot;Have you noticed any changes in taste or smell?&quot; → patient then
+  reveals it).
+- The doctor should spend 2-4 exchanges per symptom: asking about onset,
+  duration, severity, timing, what makes it worse/better.
+
+The patient does NOT have any of the following related symptoms.
+The doctor should ask about each during ROS (these are clinically
+related symptoms a doctor would naturally ask about), and the patient
+should deny them naturally:
+
+   1. Numbness/Tingling (pins and needles in hands/feet)
+   2. Sleep disturbance (difficulty falling/staying asleep)
+   3. Palpitations (heart skipping beats)
+
+If the doctor asks about ANY symptom not on either list, the patient
+should deny it.  The patient must NEVER volunteer symptoms that are not
+on the present list.
+
+═══════════════════════════════════════════════════════════════
+CLINICAL OUTLINE  (follow this natural flow — do NOT label stages)
+═══════════════════════════════════════════════════════════════
+1. GREETING (~2-4 lines) — Doctor introduces themselves briefly and asks
+   an open-ended question (&quot;What brings you in today?&quot;).
+
+2. CHIEF COMPLAINT (~4-6 lines) — The patient&#x27;s opening centers on:
+   &quot;Confusion/Altered mental status (feeling out of it) + Weakness (no strength in arms/legs)&quot;
+   described in their own everyday words.  The patient mentions these
+   2-3 main concerns that brought them in.  They should NOT list every
+   symptom yet.
+
+3. HISTORY OF PRESENT ILLNESS (~50-70 lines, the BULK of the conversation)
+   — The doctor systematically explores each present symptom one by one.
+   Focus on neurological-specific questioning:
+   For EACH symptom spend 2-4 exchanges covering:
+     • When did it start?  How long has it lasted?
+     • How severe is it? (use scales, comparisons)
+     • Is it constant or does it come and go?
+     • What makes it worse? What makes it better?
+     • Any related symptoms? (this is how the next symptom gets revealed)
+   The patient reveals symptoms GRADUALLY — some only when directly asked.
+   Weave in occasional CCDA background naturally during HPI.
+
+4. REVIEW OF SYSTEMS (~8-12 lines) — Doctor asks about negated symptoms
+   to rule out related conditions.  Space them out — don&#x27;t rapid-fire.
+   Patient denies naturally with variety.
+
+5. CONTEXT (~10-16 lines) — Doctor weaves in remaining background items
+   NOT yet covered (allergies, social history, relevant conditions).
+   This should feel like natural follow-up questions, not a data dump.
+   If a CCDA item already came up naturally during HPI, do NOT repeat it.
+
+6. ASSESSMENT (~4-6 lines) — Doctor gives a preliminary assessment:
+   &quot;a neurological concern worth investigating further.&quot;
+   The assessment should sound clinical but not overly definitive.
+   Do NOT mention any viral respiratory illness, influenza, or COVID.
+
+7. PLAN (~6-10 lines) — some imaging and bloodwork, and possibly a neurology referral.
+   Return precautions, follow-up scheduling, warm closing.
+
+═══════════════════════════════════════════════════════════════
+LENGTH &amp; PACING RULES  (CRITICAL)
+═══════════════════════════════════════════════════════════════
+- The conversation MUST be 150–250 lines long (75–125 exchanges).
+  A conversation shorter than 150 lines is a FAILURE.
+- HPI should be roughly 50-60% of the total conversation.
+- The patient mentions ONLY the present symptoms listed above — NO OTHERS.
+- Every present symptom must appear in the conversation.
+- Every negated symptom must be asked about and denied.
+- CCDA background items should be woven throughout naturally — NOT
+  dumped in a single section.  Sprinkle them during HPI and context.
+- Do NOT mention COVID, flu, or any viral respiratory illness.
+- Make the conversation feel REAL — not every question gets a perfect
+  answer; the patient can be vague, ask for clarification, or need
+  prompting.</div>
+  </div>
+  <div class="prompt-block">
+    <div class="prompt-label">USER PROMPT (1930 chars)</div>
+    <div class="prompt-text">Generate a full doctor–patient transcript for the patient below.
+Start directly with &quot;D: &quot; — no preamble.
+
+=== PATIENT DEMOGRAPHICS ===
+Name: Zina602 Beatty507
+Age: 104
+Gender: Female
+Race/Ethnicity: black, non-hispanic
+Location: Charleston, SC
+
+=== 🟢 PRESENT SYMPTOMS [NEUROLOGICAL] (patient HAS these — describe vividly) ===
+Chief complaint: Confusion/Altered mental status (feeling out of it) + Weakness (no strength in arms/legs)
+  1. Confusion/Altered mental status (feeling out of it)
+  2. Weakness (no strength in arms/legs)
+  3. Photophobia (light sensitivity/hurts to look at bright light)
+  4. Tremor (hands shaking involuntarily)
+
+=== 🔴 NEGATED SYMPTOMS (doctor asks, patient DENIES) ===
+  1. Numbness/Tingling (pins and needles in hands/feet)
+  2. Sleep disturbance (difficulty falling/staying asleep)
+  3. Palpitations (heart skipping beats)
+
+=== CCDA BACKGROUND (weave naturally THROUGHOUT the conversation) ===
+NOTE: Do NOT dump these in one block. Sprinkle them during HPI and context.
+E.g., doctor asks &#x27;Are you on any medications?&#x27; mid-HPI → patient lists meds.
+E.g., doctor: &#x27;Any other health conditions I should know about?&#x27; → patient mentions a condition.
+
+Past Medical Conditions (weave into conversation when relevant):
+  - Hypertension
+  - Miscarriage in first trimester
+  - Chronic sinusitis (disorder)
+  - Prediabetes
+  - Stroke
+
+Current Medications (patient mentions when doctor asks about treatments):
+  - Atenolol 50 MG / Chlorthalidone 25 MG Oral Tablet
+  - Acetaminophen 325 MG Oral Tablet
+  - Naproxen sodium 220 MG Oral Tablet
+  - Warfarin Sodium 5 MG Oral Tablet
+  - Verapamil Hydrochloride 40 MG
+
+Allergies (doctor asks, patient answers):
+  - There are no current allergies at the time of this document&#x27;s creation.
+
+Immunizations (may mention briefly):
+  - Influenza, seasonal, injectable, preservative free
+  - Td (adult) preservative free
+  - Influenza, seasonal, injectable, preservative free</div>
+  </div>
+</div>
+
+<!-- ═══ TRANSCRIPT TAB ═══ -->
+<div class="tab-content" id="tab-transcript">
+  <div class="transcript-stats">
+    <div class="stat"><span class="num">24</span> Doctor lines</div>
+    <div class="stat"><span class="num">23</span> Patient lines</div>
+    <div class="stat"><span class="num">47</span> Total lines</div>
+    <div class="stat">Present coverage: <span class="num">4/4</span></div>
+  </div>
+  <div class="transcript-body">
+    <div class="line doctor"><span class="speaker doc">D:</span>Good morning, Ms. Beatty. I&#x27;m Dr. Smith. What brings you in today?</div>
+<div class="line patient"><span class="speaker pat">P:</span>Uh, hi, Doctor. Um, I&#x27;m not, like, feeling quite right. I&#x27;ve been, um, kind of out of it, you know? And, uh, I just don&#x27;t have any strength, like, in my arms and legs.</div>
+<div class="line doctor"><span class="speaker doc">D:</span>Alright, I see. When did you first start noticing these problems?</div>
+<div class="line patient"><span class="speaker pat">P:</span>Um, maybe a few days ago? Yeah, I think it started about, uh, three or four days ago. It&#x27;s kind of been, um, getting worse since then.</div>
+<div class="line doctor"><span class="speaker doc">D:</span>OK. And how is this affecting your daily activities?</div>
+<div class="line patient"><span class="speaker pat">P:</span>Well, it&#x27;s, it&#x27;s tough to, you know, get around and do things. I feel, uh, really weak and sometimes, um, confused about, uh, what I was doing.</div>
+<div class="line doctor"><span class="speaker doc">D:</span>I understand. Would you say this confusion is constant, or does it come and go?</div>
+<div class="line patient"><span class="speaker pat">P:</span>Uh, it kinda comes and goes. Sometimes I&#x27;m OK, and then sometimes, um, I just feel lost, like everything&#x27;s a bit foggy.</div>
+<div class="line doctor"><span class="speaker doc">D:</span>OK. Now, regarding the weakness, is it more in your arms, your legs, or both?</div>
+<div class="line patient"><span class="speaker pat">P:</span>I&#x27;d say both, yeah. Uh, they just feel really heavy, and, uh, I don&#x27;t have any strength in them.</div>
+<div class="line doctor"><span class="speaker doc">D:</span>Do you notice anything that makes the weakness or confusion worse or better?</div>
+<div class="line patient"><span class="speaker pat">P:</span>Not really. Um, it&#x27;s, it&#x27;s pretty much there all the time, but maybe, uh, after resting a bit, it feels a tiny bit better, but not much.</div>
+<div class="line doctor"><span class="speaker doc">D:</span>Alright, and have you had any issues with sensitivity to light?</div>
+<div class="line patient"><span class="speaker pat">P:</span>Uh, actually, yeah, um, the light has been kind of bothering me. It hurts to look at, you know, bright lights or even just like, um, harsh lighting in a room.</div>
+<div class="line doctor"><span class="speaker doc">D:</span>OK. How long have you been experiencing this light sensitivity?</div>
+<div class="line patient"><span class="speaker pat">P:</span>Uh, it started around the same time as the other stuff. It&#x27;s, um, you know, just been there too.</div>
+<div class="line doctor"><span class="speaker doc">D:</span>And have you tried anything to help with the light sensitivity?</div>
+<div class="line patient"><span class="speaker pat">P:</span>Not really, uh, just, like, wearing sunglasses sometimes, even inside. It helps a little, I guess.</div>
+<div class="line doctor"><span class="speaker doc">D:</span>OK. Have you noticed any shaking or trembling in your hands?</div>
+<div class="line patient"><span class="speaker pat">P:</span>Uh, yeah, my hands have been, uh, a bit shaky. It&#x27;s kind of hard to even, you know, hold things sometimes.</div>
+<div class="line doctor"><span class="speaker doc">D:</span>When did you first notice the tremor?</div>
+<div class="line patient"><span class="speaker pat">P:</span>Uh, I think it&#x27;s been a few days too. Maybe, uh, a bit after the, you know, confusion started.</div>
+<div class="line doctor"><span class="speaker doc">D:</span>Is the shaking constant, or does it come and go?</div>
+<div class="line patient"><span class="speaker pat">P:</span>It&#x27;s mostly constant, I think. Maybe, um, a bit worse when I&#x27;m trying to, you know, do something with my hands.</div>
+<div class="line doctor"><span class="speaker doc">D:</span>Have you noticed any numbness or tingling in your hands or feet?</div>
+<div class="line patient"><span class="speaker pat">P:</span>No, not really. I haven&#x27;t felt anything like that.</div>
+<div class="line doctor"><span class="speaker doc">D:</span>And how about your sleep? Any trouble falling or staying asleep?</div>
+<div class="line patient"><span class="speaker pat">P:</span>No, uh, I sleep OK, I think. No major problems there.</div>
+<div class="line doctor"><span class="speaker doc">D:</span>Have you experienced any palpitations or noticed your heart skipping beats?</div>
+<div class="line patient"><span class="speaker pat">P:</span>No, um, I don&#x27;t think I&#x27;ve had anything like that.</div>
+<div class="line doctor"><span class="speaker doc">D:</span>Alright. Are you currently on any medications?</div>
+<div class="line patient"><span class="speaker pat">P:</span>Uh, yeah, I take, um, Atenolol with Chlorthalidone, um, for, you know, my blood pressure. And, uh, I also take Acetaminophen and Naproxen for pain. Oh, and Warfarin for my blood, I think, and Verapamil too.</div>
+<div class="line doctor"><span class="speaker doc">D:</span>OK, and do you have any allergies that we should be aware of?</div>
+<div class="line patient"><span class="speaker pat">P:</span>No, I don&#x27;t have any allergies that I know of.</div>
+<div class="line doctor"><span class="speaker doc">D:</span>Alright. Have you had your flu shot or any other recent immunizations?</div>
+<div class="line patient"><span class="speaker pat">P:</span>Yeah, I had the, um, flu shot and the Td shot, I think. Not too long ago.</div>
+<div class="line doctor"><span class="speaker doc">D:</span>Thank you. Do you have any other health conditions that we should discuss?</div>
+<div class="line patient"><span class="speaker pat">P:</span>Um, well, I&#x27;ve had high blood pressure for a while. Had a stroke a long time ago, and, uh, I think I have prediabetes. Also, um, chronic sinus issues.</div>
+<div class="line doctor"><span class="speaker doc">D:</span>OK. That&#x27;s helpful. Let&#x27;s see. I think we have enough information to start with. Given your symptoms, it does seem like a neurological concern worth investigating further.</div>
+<div class="line patient"><span class="speaker pat">P:</span>Alright, um, what do you think we should do?</div>
+<div class="line doctor"><span class="speaker doc">D:</span>I recommend we start with some imaging, like a CT scan or MRI, to get a clearer picture of what&#x27;s going on in your brain. We&#x27;ll also do some blood tests to check for any abnormalities.</div>
+<div class="line patient"><span class="speaker pat">P:</span>That sounds good, I guess. Um, do you think I&#x27;ll need to see a specialist?</div>
+<div class="line doctor"><span class="speaker doc">D:</span>Depending on the results, we may refer you to a neurologist for further evaluation. They can provide more specialized care if needed.</div>
+<div class="line patient"><span class="speaker pat">P:</span>OK, thank you, Doctor.</div>
+<div class="line doctor"><span class="speaker doc">D:</span>I&#x27;ll make sure the staff helps with scheduling these tests and any follow-up appointments. If you notice any new or worsening symptoms, please come back right away.</div>
+<div class="line patient"><span class="speaker pat">P:</span>Alright. Thank you again.</div>
+<div class="line doctor"><span class="speaker doc">D:</span>You&#x27;re welcome, Ms. Beatty. Take care, and we&#x27;ll see you soon for those tests.</div>
+  </div>
+</div>
+
+</body>
+</html>
