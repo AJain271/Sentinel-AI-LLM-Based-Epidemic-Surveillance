@@ -107,7 +107,7 @@ def load_simulation_data() -> pd.DataFrame:
 @st.cache_data(show_spinner="Loading embeddings …")
 def load_embeddings() -> np.ndarray:
     """
-    Load pre-cached 768-dim nomic-embed-text embeddings.
+    Load pre-cached 768-dim ClinicalBERT embeddings.
     Row order matches sorted(glob("*.json")) from the fewshot dir.
     """
     if not EMBEDDINGS_CACHE.exists():

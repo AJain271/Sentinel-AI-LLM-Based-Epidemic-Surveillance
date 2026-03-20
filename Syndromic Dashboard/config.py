@@ -8,7 +8,13 @@ WORKSPACE = Path(__file__).resolve().parent.parent
 
 # ── Data paths ──────────────────────────────────────────────────────────────
 FEWSHOT_DIR = WORKSPACE / "LLM Symptom Extraction Full Run" / "results" / "fewshot"
-EMBEDDINGS_CACHE = WORKSPACE / "Clustering" / "embeddings_cache.npy"
+EMBEDDINGS_CACHE = WORKSPACE / "Clustering" / "clinicalbert_embeddings_cache.npy"
+CLUSTERING_CACHE = WORKSPACE / "Syndromic Dashboard" / "clustering_cache.pkl"
+
+# ── Transcript generation paths ─────────────────────────────────────────────
+GENERATION_V3_DIR = WORKSPACE / "Synthetic Transcript Generation" / "synthetic generation" / "v3"
+CCDA_DIR = WORKSPACE / "Synthetic Transcript Generation" / "Synthea CCDAs" / "used"
+CLEAN_TRANSCRIPTS_DIR = WORKSPACE / "Clean Transcripts"
 
 # ── Outbreak timeline ───────────────────────────────────────────────────────
 OUTBREAK_START = "2025-12-26"          # Day 1

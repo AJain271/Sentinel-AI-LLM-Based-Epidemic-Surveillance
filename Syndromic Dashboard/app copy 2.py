@@ -748,6 +748,7 @@ if st.session_state.current_view == "hospital":
     chart1, chart2 = st.columns(2)
 
     with chart1:
+        st.markdown('<div class="chart-box">', unsafe_allow_html=True)
         st.markdown('<div class="section-header">Patient Volume by Case Type</div>',
                     unsafe_allow_html=True)
         case_counts = day_df["case_type"].value_counts().reindex(
@@ -766,8 +767,10 @@ if st.session_state.current_view == "hospital":
         fig_vol.update_xaxes(showgrid=False)
         fig_vol.update_yaxes(showgrid=True, gridcolor="#F1F5F9")
         st.plotly_chart(fig_vol, width="stretch")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     with chart2:
+        st.markdown('<div class="chart-box">', unsafe_allow_html=True)
         st.markdown('<div class="section-header">Case Type Distribution</div>',
                     unsafe_allow_html=True)
         dist = day_df["case_type"].value_counts().reset_index()
@@ -781,8 +784,10 @@ if st.session_state.current_view == "hospital":
         fig_pie.update_traces(textinfo="percent+value",
                               textfont_size=12, textfont_color="#0F172A")
         st.plotly_chart(fig_pie, width="stretch")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Token Cost by Hospital ────────────────────────────────────────
+    st.markdown('<div class="chart-box">', unsafe_allow_html=True)
     st.markdown('<div class="section-header">Token Cost by Hospital</div>',
                 unsafe_allow_html=True)
     _day_all = df[df["day"] == day]
@@ -806,6 +811,7 @@ if st.session_state.current_view == "hospital":
                                        font=dict(size=12, color="#0F172A")))
     fig_cost.update_traces(textposition="outside")
     st.plotly_chart(fig_cost, width="stretch")
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # ── Anomaly Ticker ─────────────────────────────────────────────────
     flagged = day_df[day_df["Novelty_Flag"]].copy()
@@ -1130,6 +1136,7 @@ elif st.session_state.current_view == "command":
                                         on_select="rerun", selection_mode="points")
 
         with _bar_col:
+            st.markdown('<div class="chart-box">', unsafe_allow_html=True)
             st.markdown(
                 f'<div class="section-header">Cases in Window  |  {_window_label}</div>',
                 unsafe_allow_html=True)
@@ -1151,6 +1158,7 @@ elif st.session_state.current_view == "command":
             fig_bar_cmd.update_xaxes(showgrid=False)
             fig_bar_cmd.update_yaxes(showgrid=True, gridcolor="#F1F5F9")
             st.plotly_chart(fig_bar_cmd, use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
         # ── Click-to-Detail panel ──────────────────────────────────────
         sel_points = (map_event.selection.points
@@ -1395,6 +1403,7 @@ elif st.session_state.current_view == "command":
             "Overall (%)": _all_pct,
         }).sort_values("Selected (%)", ascending=True).tail(20)
 
+        st.markdown('<div class="chart-box">', unsafe_allow_html=True)
         st.markdown(
             f'<div class="section-header">Symptom Prevalence  |  '
             f'{_symp_choice}  ({len(_symp_idx)} patients)</div>',
@@ -1431,6 +1440,7 @@ elif st.session_state.current_view == "command":
             margin=dict(l=250, r=40, t=30, b=50),
         )
         st.plotly_chart(fig_symp, width="stretch")
+        st.markdown('</div>', unsafe_allow_html=True)
 
         # Detailed table
         with st.expander("Full Symptom Table"):
@@ -1523,6 +1533,7 @@ elif st.session_state.current_view == "command":
         # ── Chart A: Incidence curve + fitted exponential ─────────────
         _r0_ch1, _r0_ch2 = st.columns(2)
         with _r0_ch1:
+            st.markdown('<div class="chart-box">', unsafe_allow_html=True)
             st.markdown('<div class="section-header">Daily Incidence  |  Novel Virus</div>',
                         unsafe_allow_html=True)
             fig_inc = go.Figure()
@@ -1549,9 +1560,11 @@ elif st.session_state.current_view == "command":
                                               font=dict(size=12, color="#0F172A")))
             fig_inc.update_yaxes(showgrid=True, gridcolor="#F1F5F9")
             st.plotly_chart(fig_inc, width="stretch")
+            st.markdown('</div>', unsafe_allow_html=True)
 
         # ── Chart B: SIR projection ──────────────────────────────────
         with _r0_ch2:
+            st.markdown('<div class="chart-box">', unsafe_allow_html=True)
             st.markdown('<div class="section-header">SIR Projection  |  30-Day Forward</div>',
                         unsafe_allow_html=True)
 
@@ -1612,6 +1625,7 @@ elif st.session_state.current_view == "command":
                 f'Projected peak: <b>Day {_peak_day}</b> with '
                 f'<b>{_peak_inf:,}</b> concurrent infections  '
                 f'(Pop. {_N:,})</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
         # ── Per-hub R0 table ──────────────────────────────────────────
         with st.expander("R0 by Hospital Hub"):
@@ -1738,6 +1752,7 @@ elif st.session_state.current_view == "command":
         # ── Chart A: Cumulative Novelty Flag Trend (LINE GRAPH) ──────
         _ew_ch1, _ew_ch2 = st.columns(2, gap="medium")
         with _ew_ch1:
+            st.markdown('<div class="chart-box">', unsafe_allow_html=True)
             st.markdown(
                 '<div class="section-header">Cumulative Novelty Flags Over Time</div>',
                 unsafe_allow_html=True)
@@ -1818,9 +1833,11 @@ elif st.session_state.current_view == "command":
             )
             fig_ew_line.update_yaxes(showgrid=True, gridcolor="#F1F5F9")
             st.plotly_chart(fig_ew_line, use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
         # ── Chart B: Daily New Flags by Hospital Hub (stacked bar) ───
         with _ew_ch2:
+            st.markdown('<div class="chart-box">', unsafe_allow_html=True)
             st.markdown(
                 '<div class="section-header">Daily New Novelty Flags by Hospital</div>',
                 unsafe_allow_html=True)
@@ -1847,6 +1864,7 @@ elif st.session_state.current_view == "command":
             )
             fig_ew_bar.update_yaxes(showgrid=True, gridcolor="#F1F5F9")
             st.plotly_chart(fig_ew_bar, use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
         # ── Early Warning Signal explanation ──────────────────────────
         if _ew_lead_time and _ew_lead_time > 0:

@@ -1,59 +1,86 @@
 """
-Two-Stage HDBSCAN Clustering Engine  (Dashboard Edition)
-=========================================================
-Mirrors the methodology of ``Clustering/clustering_pipeline.py``
-but uses a **rolling window** — for day *d* the engine clusters
-patients from a 3-day window: Days max(1, d-2) … d.
+UMAP + HDBSCAN Clustering Engine  (Dashboard Edition)
+======================================================
+Uses the validated UMAP + HDBSCAN (EOM) pipeline from
+``Clustering/USED ALGORITHM/unsupervised_umap_hdbscan.py``
+adapted for a **cumulative window** — for day *d* the engine
+clusters all patients from Day 1 through Day *d*.
 
 Pipeline per window
 ───────────────────
-1.  Build weighted distance matrix  D = w_cat * D_cat + w_sem * D_sem
-2.  Stage 1  — HDBSCAN on D to identify healthy-dominated clusters
-                 (≥ 70 % healthy ⇒ Cluster 0)
-3.  Stage 2  — HDBSCAN on the non-healthy subset (fresh D_nh)
-                 to isolate novel-virus, flu-like, and differential subtypes
-4.  Merge labels  (healthy → 0, Stage 2 IDs offset +1, noise → -1)
-5.  Noise recovery — assign each noise point to nearest cluster
-6.  Name clusters by dominant case/detail type
-7.  t-SNE on final D for visualisation
+1. One-hot encode 70 symptoms × 3 classes (-1, 0, 1) → 210-dim
+2. Load ClinicalBERT embeddings (768-dim, pre-cached)
+3. Z-score normalise both matrices independently
+4. Concatenate → (N, 978)
+5. UMAP 10D reduction
+6. HDBSCAN (EOM) clustering
+7. UMAP 2D projection for visualisation
+8. Outbreak detection — ≥50 % of cluster has novel symptoms present
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import pickle
 from collections import Counter
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import streamlit as st
-from scipy.spatial.distance import pdist, squareform
-from sklearn.manifold import TSNE
+from sklearn.cluster import HDBSCAN
 from sklearn.metrics import silhouette_score
-import hdbscan
+from sklearn.preprocessing import StandardScaler
 
-from config import FEWSHOT_DIR
+from config import FEWSHOT_DIR, CLUSTERING_CACHE
 
-# ── optimised hyper-parameters (from clustering_pipeline sweep) ─────────────
-W_CAT = 0.78
-W_SEM = 0.22
+# ── Hyper-parameters (matching USED ALGORITHM) ──────────────────────────────
+HDBSCAN_MIN_CLUSTER_SIZE = 15
+HDBSCAN_MIN_SAMPLES = 5
+UMAP_N_NEIGHBORS = 15
+UMAP_N_COMPONENTS = 10
+UMAP_MIN_DIST = 0.0
+UMAP_2D_MIN_DIST = 0.5
+UMAP_2D_SPREAD = 2.0
 
-S1_MCS = 5          # Stage-1 min_cluster_size
-S1_MS  = None       # Stage-1 min_samples ("auto" in the pipeline)
-S2_MCS = 5          # Stage-2 min_cluster_size
-S2_MS  = 3          # Stage-2 min_samples
-
-HEALTHY_THRESHOLD = 0.70   # ≥ 70 % healthy → healthy cluster
-RANDOM_STATE      = 42
-WINDOW_SIZE       = 3      # rolling window width (days)
+NOVELTY_OUTBREAK_THRESHOLD = 0.50   # ≥ 50 % have novel symptoms
+RANDOM_STATE = 42
+WINDOW_SIZE = 3
 
 
-# ── categorical matrix builder ──────────────────────────────────────────────
+# ── One-hot symptom matrix builder ──────────────────────────────────────────
+@st.cache_data(show_spinner="Building one-hot symptom matrix …")
+def build_onehot_matrix(_json_dir: str) -> tuple[np.ndarray, list[str]]:
+    """
+    Build (N, 210) one-hot matrix  — 70 symptoms × 3 classes (-1, 0, 1).
+    Row order matches ``sorted(glob(*.json))``.
+    """
+    data_dir = Path(_json_dir)
+    json_files = sorted(data_dir.glob("*.json"))
+    all_scores: list[dict] = []
+    for jf in json_files:
+        with open(jf, encoding="utf-8") as f:
+            rec = json.load(f)
+        all_scores.append(rec["checklist_scores"])
+
+    symptom_names = sorted(all_scores[0].keys())
+    n = len(all_scores)
+    n_symptoms = len(symptom_names)
+    onehot = np.zeros((n, n_symptoms * 3), dtype=np.float64)
+
+    class_map = {-1: 0, 0: 1, 1: 2}
+    for i, scores in enumerate(all_scores):
+        for j, s in enumerate(symptom_names):
+            val = scores.get(s, 0)
+            col = j * 3 + class_map[val]
+            onehot[i, col] = 1.0
+
+    return onehot, symptom_names
+
+
 @st.cache_data(show_spinner="Building categorical symptom matrix …")
 def build_categorical_matrix(_json_dir: str) -> np.ndarray:
-    """
-    Build (N, 70) binary symptom matrix from ``checklist_scores``
-    in each JSON.  Row order matches ``sorted(glob(*.json))``.
-    """
+    """(N, 70) raw symptom scores for the symptom-analysis tab."""
     data_dir = Path(_json_dir)
     json_files = sorted(data_dir.glob("*.json"))
     all_scores: list[dict] = []
@@ -84,10 +111,7 @@ def get_symptom_names(_json_dir: str) -> list[str]:
 # ── detail type builder (for cluster naming) ────────────────────────────────
 @st.cache_data(show_spinner=False)
 def _build_detail_types(_json_dir: str) -> list[str]:
-    """
-    Return fine-grained labels aligned with sorted JSON order.
-    Differential patients are split into subtypes via master_results.csv.
-    """
+    """Fine-grained labels: differential patients split into subtypes."""
     import csv
     data_dir = Path(_json_dir)
     workspace = data_dir.parent.parent
@@ -107,8 +131,6 @@ def _build_detail_types(_json_dir: str) -> list[str]:
         with open(jf, encoding="utf-8") as f:
             rec = json.load(f)
         fname = rec.get("filename", jf.stem)
-
-        # derive case type
         fn = fname.upper()
         if fn.startswith("NOVEL"):
             ct = "novel_virus"
@@ -126,271 +148,262 @@ def _build_detail_types(_json_dir: str) -> list[str]:
     return detail
 
 
-# ── distance matrix ─────────────────────────────────────────────────────────
-def _compute_distance_matrix(A: np.ndarray, B: np.ndarray) -> np.ndarray:
-    """Weighted Gower distance: w_cat * L1(A) + w_sem * cosine(B)."""
-    n = A.shape[0]
-    if n < 2:
-        return np.zeros((1, 1))
-
-    # categorical L1
-    D_cat = squareform(pdist(A.astype(np.float64), metric="cityblock"))
-    cat_max = D_cat.max()
-    if cat_max > 0:
-        D_cat /= cat_max
-
-    # semantic cosine
-    has_emb = np.linalg.norm(B, axis=1) > 0
-    emb_idx = np.where(has_emb)[0]
-    no_emb  = np.where(~has_emb)[0]
-    D_sem   = np.zeros((n, n), dtype=np.float64)
-
-    if len(emb_idx) > 1:
-        B_sub = B[emb_idx]
-        d_sub = squareform(pdist(B_sub, metric="cosine"))
-        for ii, i in enumerate(emb_idx):
-            for jj, j in enumerate(emb_idx):
-                D_sem[i, j] = d_sub[ii, jj]
-    for i in no_emb:
-        for j in emb_idx:
-            D_sem[i, j] = 1.0
-            D_sem[j, i] = 1.0
-
-    sem_max = D_sem.max()
-    if sem_max > 0:
-        D_sem /= sem_max
-
-    D = W_CAT * D_cat + W_SEM * D_sem
-    np.fill_diagonal(D, 0.0)
-    return D
+# ── Build novelty flags per patient (for outbreak detection) ────────────────
+@st.cache_data(show_spinner=False)
+def _build_novelty_flags(_json_dir: str) -> np.ndarray:
+    """Return boolean array: True if patient has non-blank unmapped_symptoms."""
+    data_dir = Path(_json_dir)
+    json_files = sorted(data_dir.glob("*.json"))
+    flags = np.zeros(len(json_files), dtype=bool)
+    for i, jf in enumerate(json_files):
+        with open(jf, encoding="utf-8") as f:
+            rec = json.load(f)
+        unmapped = rec.get("unmapped_symptoms", [])
+        has_novel = any(
+            isinstance(s, dict) and s.get("status") == 1
+            for s in unmapped
+        )
+        flags[i] = has_novel
+    return flags
 
 
-# ── t-SNE ───────────────────────────────────────────────────────────────────
-def _run_tsne(D: np.ndarray) -> np.ndarray:
-    """2-D projection from precomputed distance matrix."""
-    n = D.shape[0]
-    if n < 2:
-        return np.zeros((n, 2))
-    perp = min(30, max(2, n // 3))
-    tsne = TSNE(
-        n_components=2,
-        metric="precomputed",
-        perplexity=perp,
-        random_state=RANDOM_STATE,
-        init="random",
-    )
-    return tsne.fit_transform(D)
-
-
-# ── two-stage HDBSCAN core ─────────────────────────────────────────────────
-def _two_stage_hdbscan(
-    A: np.ndarray,
-    B: np.ndarray,
-    case_types: np.ndarray,
+# ── UMAP + HDBSCAN core ────────────────────────────────────────────────────
+def _run_umap_hdbscan(
+    A_onehot: np.ndarray,
+    B_semantic: np.ndarray,
     detail_types: np.ndarray,
-) -> tuple[np.ndarray, dict[int, str], np.ndarray]:
+    novelty_flags: np.ndarray,
+) -> dict:
     """
-    Run the full two-stage pipeline on the provided subset.
+    Run the full UMAP + HDBSCAN pipeline on the provided subset.
 
-    Returns
-    -------
-    labels       – final cluster label per patient
-    label_names  – {cluster_id: cluster_name}
-    D            – distance matrix (for t-SNE)
+    Returns dict with: labels, label_names, coords_2d, silhouette,
+                       n_clusters, n_noise, outbreak_label
     """
-    n = len(A)
+    import umap
 
-    # ── too few patients → single cluster ──────────────────────────────
+    n = len(A_onehot)
+
     if n < 6:
+        return {
+            "labels": np.zeros(n, dtype=int),
+            "label_names": {0: "mixed"},
+            "coords_2d": np.zeros((n, 2)),
+            "silhouette": None,
+            "n_clusters": 1,
+            "n_noise": 0,
+            "outbreak_label": None,
+        }
+
+    # Z-score normalise independently
+    scaler_oh = StandardScaler()
+    A_norm = scaler_oh.fit_transform(A_onehot)
+
+    scaler_sem = StandardScaler()
+    B_norm = scaler_sem.fit_transform(B_semantic)
+
+    # Concatenate → (N, 978)
+    X = np.hstack([A_norm, B_norm])
+
+    # UMAP 10D
+    reducer = umap.UMAP(
+        n_neighbors=min(UMAP_N_NEIGHBORS, n - 1),
+        n_components=min(UMAP_N_COMPONENTS, n - 1),
+        min_dist=UMAP_MIN_DIST,
+        metric="euclidean",
+        random_state=RANDOM_STATE,
+    )
+    X_umap = reducer.fit_transform(X)
+
+    # UMAP 2D projection
+    reducer_2d = umap.UMAP(
+        n_neighbors=min(UMAP_N_NEIGHBORS, n - 1),
+        n_components=2,
+        min_dist=UMAP_2D_MIN_DIST,
+        metric="euclidean",
+        random_state=RANDOM_STATE,
+        spread=UMAP_2D_SPREAD,
+    )
+    coords_2d = reducer_2d.fit_transform(X_umap)
+
+    # HDBSCAN (EOM) — FIXED parameters matching reference implementation
+    # (unsupervised_umap_hdbscan.py uses fixed 15 / 5, no dynamic scaling)
+    if n < HDBSCAN_MIN_CLUSTER_SIZE:
+        # Too few points for meaningful HDBSCAN — everything would be noise
         labels = np.zeros(n, dtype=int)
-        D = _compute_distance_matrix(A, B)
-        return labels, {0: "mixed"}, D
+        label_names: dict[int, str] = {0: "mixed"}
+        return {
+            "labels": labels,
+            "label_names": label_names,
+            "coords_2d": coords_2d,
+            "silhouette": None,
+            "n_clusters": 1,
+            "n_noise": 0,
+            "outbreak_label": None,
+        }
+    clusterer = HDBSCAN(
+        min_cluster_size=HDBSCAN_MIN_CLUSTER_SIZE,
+        min_samples=HDBSCAN_MIN_SAMPLES,
+        cluster_selection_method="eom",
+    )
+    labels = clusterer.fit_predict(X_umap)
 
-    # ── full distance matrix ───────────────────────────────────────────
-    D_full = _compute_distance_matrix(A, B)
-    healthy_mask = (case_types == "healthy")
+    n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+    n_noise = int((labels == -1).sum())
 
-    # ═════════════════ STAGE 1: healthy vs non-healthy ═════════════════
-    kw1 = dict(min_cluster_size=min(S1_MCS, max(2, n // 5)),
-               metric="precomputed", cluster_selection_method="eom")
-    if S1_MS is not None:
-        kw1["min_samples"] = S1_MS
-    s1_labels = hdbscan.HDBSCAN(**kw1).fit_predict(D_full.copy())
+    sil = None
+    if n_clusters >= 2 and (labels != -1).sum() > n_clusters:
+        try:
+            sil = float(silhouette_score(X_umap[labels != -1], labels[labels != -1]))
+        except ValueError:
+            pass
 
-    # identify healthy-dominated clusters (≥ 70 % healthy)
-    healthy_cluster_ids: set[int] = set()
-    for cid in set(s1_labels):
+    # Label naming (by dominant detail type)
+    label_names: dict[int, str] = {-1: "noise"}
+    for cid in sorted(set(labels)):
         if cid == -1:
             continue
-        mask = s1_labels == cid
-        h_frac = healthy_mask[mask].sum() / mask.sum()
-        if h_frac >= HEALTHY_THRESHOLD:
-            healthy_cluster_ids.add(cid)
-
-    # separate indices
-    healthy_idx: list[int] = []
-    nonhealthy_idx: list[int] = []
-    for i in range(n):
-        if s1_labels[i] in healthy_cluster_ids:
-            healthy_idx.append(i)
-        else:
-            nonhealthy_idx.append(i)
-
-    # ═════════════════ STAGE 2: sub-cluster non-healthy ════════════════
-    if len(nonhealthy_idx) < 3:
-        # too few non-healthy patients — everything healthy
-        labels = np.zeros(n, dtype=int)
-        return labels, {0: "healthy"}, D_full
-
-    nh = np.array(nonhealthy_idx)
-    A_nh, B_nh = A[nh], B[nh]
-    D_nh = _compute_distance_matrix(A_nh, B_nh)
-
-    kw2 = dict(min_cluster_size=min(S2_MCS, max(2, len(nh) // 5)),
-               metric="precomputed", cluster_selection_method="eom")
-    if S2_MS is not None:
-        kw2["min_samples"] = min(S2_MS, max(1, len(nh) // 5))
-    s2_labels = hdbscan.HDBSCAN(**kw2).fit_predict(D_nh.copy())
-
-    # ═════════════════ MERGE ═══════════════════════════════════════════
-    final_labels = np.full(n, -1, dtype=int)
-    # healthy → 0
-    for i in healthy_idx:
-        final_labels[i] = 0
-    # non-healthy → offset by +1
-    for local_i, global_i in enumerate(nonhealthy_idx):
-        if s2_labels[local_i] == -1:
-            final_labels[global_i] = -1          # noise stays noise
-        else:
-            final_labels[global_i] = s2_labels[local_i] + 1
-
-    # ═════════════════ NOISE RECOVERY ══════════════════════════════════
-    noise_idx = np.where(final_labels == -1)[0]
-    if len(noise_idx) > 0:
-        cluster_ids = sorted(set(final_labels[final_labels >= 0]))
-        if cluster_ids:
-            for ni in noise_idx:
-                best_cid, best_dist = -1, float("inf")
-                for cid in cluster_ids:
-                    members = np.where(final_labels == cid)[0]
-                    avg_d = D_full[ni, members].mean()
-                    if avg_d < best_dist:
-                        best_dist = avg_d
-                        best_cid = cid
-                final_labels[ni] = best_cid
-
-    # ═════════════════ LABEL NAMING ════════════════════════════════════
-    label_names: dict[int, str] = {0: "healthy", -1: "noise"}
-    for cid in sorted(set(s2_labels[s2_labels >= 0])):
-        final_cid = cid + 1
-        s2_mask = s2_labels == cid
-        comps = Counter(detail_types[nh][s2_mask])
+        mask = labels == cid
+        comps = Counter(detail_types[mask])
         dominant = comps.most_common(1)[0][0]
-        label_names[final_cid] = dominant
+        label_names[cid] = dominant
 
-    return final_labels, label_names, D_full
+    # Outbreak detection: ≥50% of cluster has novel symptoms present
+    outbreak_label = _identify_outbreak(labels, novelty_flags)
+
+    return {
+        "labels": labels,
+        "label_names": label_names,
+        "coords_2d": coords_2d,
+        "silhouette": sil,
+        "n_clusters": n_clusters,
+        "n_noise": n_noise,
+        "outbreak_label": outbreak_label,
+    }
+
+
+def _identify_outbreak(
+    labels: np.ndarray,
+    novelty_flags: np.ndarray,
+) -> int | None:
+    """Cluster where ≥50% of patients have novel symptoms present
+    (non-blank unmapped_symptoms from LLM extraction)."""
+    best_label, best_frac = None, 0.0
+    for lbl in set(labels):
+        if lbl == -1:
+            continue
+        mask = labels == lbl
+        n_in_cluster = mask.sum()
+        if n_in_cluster < 3:
+            continue
+        novel_frac = novelty_flags[mask].sum() / n_in_cluster
+        if novel_frac > best_frac:
+            best_frac = novel_frac
+            best_label = lbl
+    return best_label if best_frac >= NOVELTY_OUTBREAK_THRESHOLD else None
 
 
 # ── public API ──────────────────────────────────────────────────────────────
 def run_window_clustering(
     df: pd.DataFrame,
     embeddings: np.ndarray,
-    categorical: np.ndarray,
+    onehot: np.ndarray,
     detail_types: np.ndarray,
+    novelty_flags: np.ndarray,
     current_day: int,
 ) -> dict:
     """
-    Two-stage HDBSCAN on a rolling window of patients.
-
-    Window: Days max(1, current_day - WINDOW_SIZE + 1) … current_day
+    UMAP + HDBSCAN on a cumulative window of patients (Day 1 → current_day).
 
     Returns dict:
-        idx, labels, label_names, tsne, silhouette,
+        idx, labels, label_names, umap_2d, silhouette,
         n_clusters, n_noise, outbreak_label, window_start, window_end
     """
-    window_start = max(1, current_day - WINDOW_SIZE + 1)
-    window_end   = current_day
+    window_start = 1
+    window_end = current_day
     days = df["day"].values
     mask = (days >= window_start) & (days <= window_end)
-    idx  = np.where(mask)[0]
+    idx = np.where(mask)[0]
 
-    A_sub = categorical[idx]
+    A_sub = onehot[idx]
     B_sub = embeddings[idx]
-    ct_sub = df["case_type"].values[idx]
     dt_sub = detail_types[idx]
+    nf_sub = novelty_flags[idx]
 
-    labels, label_names, D = _two_stage_hdbscan(A_sub, B_sub, ct_sub, dt_sub)
-    coords = _run_tsne(D)
-
-    unique = set(labels)
-    n_clusters = len([l for l in unique if l >= 0])
-    n_noise = int(np.sum(labels == -1))
-
-    sil = None
-    if n_clusters >= 2 and n_noise < len(labels):
-        try:
-            sil = float(silhouette_score(D, labels, metric="precomputed"))
-        except ValueError:
-            pass
-
-    # identify outbreak cluster (highest novel_virus fraction)
-    outbreak_label = _identify_outbreak(df, idx, labels)
+    result = _run_umap_hdbscan(A_sub, B_sub, dt_sub, nf_sub)
 
     return {
-        "idx":            idx,
-        "labels":         labels,
-        "label_names":    label_names,
-        "tsne":           coords,
-        "silhouette":     sil,
-        "n_clusters":     n_clusters,
-        "n_noise":        n_noise,
-        "outbreak_label": outbreak_label,
-        "window_start":   window_start,
-        "window_end":     window_end,
+        "idx": idx,
+        "labels": result["labels"],
+        "label_names": result["label_names"],
+        "umap_2d": result["coords_2d"],
+        "silhouette": result["silhouette"],
+        "n_clusters": result["n_clusters"],
+        "n_noise": result["n_noise"],
+        "outbreak_label": result["outbreak_label"],
+        "window_start": window_start,
+        "window_end": window_end,
     }
 
 
-def _identify_outbreak(
-    df: pd.DataFrame,
-    idx: np.ndarray,
-    labels: np.ndarray,
-) -> int | None:
-    """Cluster with highest novel_virus fraction (≥ 40 %)."""
-    sub = df.iloc[idx]
-    best_label, best_frac = None, 0.0
-    for lbl in set(labels):
-        if lbl <= 0:          # skip noise and healthy (cluster 0)
-            continue
-        group = sub.iloc[labels == lbl]
-        nf = (group["case_type"] == "novel_virus").mean()
-        if nf > best_frac:
-            best_frac = nf
-            best_label = lbl
-    return best_label if best_frac >= 0.40 else None
+# ── Data hash for cache staleness detection ─────────────────────────────────
+def _compute_data_hash(df_json: str, emb_bytes: bytes, oh_bytes: bytes) -> str:
+    h = hashlib.md5()
+    h.update(df_json[:1000].encode())
+    h.update(emb_bytes[:4096])
+    h.update(oh_bytes[:4096])
+    return h.hexdigest()
 
 
-# ── pre-compute all days ────────────────────────────────────────────────────
-@st.cache_data(show_spinner="Running two-stage HDBSCAN for all 7 days …")
+# ── pre-compute all days (with disk caching) ────────────────────────────────
+@st.cache_data(show_spinner="Running UMAP + HDBSCAN clustering …")
 def precompute_all_days(
     _df_json: str,
     _emb_bytes: bytes,
-    _cat_bytes: bytes,
-    _cat_shape: tuple[int, int],
+    _oh_bytes: bytes,
+    _oh_shape: tuple[int, int],
     _detail_json: str,
+    _novelty_json: str,
     num_days: int = 7,
 ) -> dict:
     """
-    Pre-compute two-stage clustering for Days 1 … 7 and cache.
-
-    Serialised args keep Streamlit's caching happy.
+    Pre-compute UMAP + HDBSCAN clustering for Days 1–7.
+    Results are also written to disk so subsequent app starts are instant.
     """
     import io
-    df   = pd.read_json(io.StringIO(_df_json))
-    emb  = np.frombuffer(_emb_bytes, dtype=np.float32).reshape(-1, 768)
-    cat  = np.frombuffer(_cat_bytes, dtype=np.int8).reshape(_cat_shape)
+
+    data_hash = _compute_data_hash(_df_json, _emb_bytes, _oh_bytes)
+    cache_path = Path(CLUSTERING_CACHE)
+
+    # Try loading from disk cache
+    if cache_path.exists():
+        try:
+            with open(cache_path, "rb") as f:
+                cached = pickle.load(f)
+            if cached.get("_hash") == data_hash:
+                results = {k: v for k, v in cached.items() if k != "_hash"}
+                return results
+        except Exception:
+            pass  # stale or corrupt — recompute
+
+    df = pd.read_json(io.StringIO(_df_json))
+    emb = np.frombuffer(_emb_bytes, dtype=np.float64).reshape(-1, 768)
+    oh = np.frombuffer(_oh_bytes, dtype=np.float64).reshape(_oh_shape)
     detail = np.array(json.loads(_detail_json))
+    novelty = np.array(json.loads(_novelty_json), dtype=bool)
 
     results: dict[int, dict] = {}
     for day in range(1, num_days + 1):
-        results[day] = run_window_clustering(df, emb, cat, detail, day)
+        results[day] = run_window_clustering(df, emb, oh, detail, novelty, day)
+
+    # Persist to disk
+    to_cache = dict(results)
+    to_cache["_hash"] = data_hash
+    try:
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(cache_path, "wb") as f:
+            pickle.dump(to_cache, f, protocol=pickle.HIGHEST_PROTOCOL)
+    except Exception:
+        pass  # non-fatal
+
     return results
